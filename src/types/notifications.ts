@@ -21,7 +21,7 @@ export interface NotificationData {
   is_read?: boolean | null;
   created_at?: string | null;
   data?: any;
-  sent_to?: string | null;
-  sent_by?: string | null;
-  image_url?: string | null;
+  sent_to?: string | null | undefined;
+  sent_by?: string | null | undefined;
+  image_url?: string | null | undefined;
 }

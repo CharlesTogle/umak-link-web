@@ -184,7 +184,7 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
         }
 
         const lostPost = data.posts[0];
-        if (lostPost.item_type !== "missing") {
+        if (!lostPost || lostPost.item_type !== "missing") {
           setLostItemError("Item ID must be a missing/lost item post");
           setLostItemPost(null);
           return;
@@ -207,7 +207,7 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
       user_id: user.out_user_id,
       user_name: user.out_user_name,
       email: user.out_email,
-      profile_picture_url: user.out_profile_picture_url,
+      profile_picture_url: user.out_profile_picture_url ?? null,
     });
     setSearchQuery("");
     setSearchResults([]);
@@ -272,7 +272,13 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
       }
 
       // Decode JWT to get user info (simple base64 decode of payload)
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      const tokenParts = token.split(".");
+      const tokenPayload = tokenParts[1];
+      if (!tokenPayload) {
+        showToast("Invalid authentication token", "danger");
+        return;
+      }
+      const payload = JSON.parse(atob(tokenPayload));
 
       await api.post("/claims/process", {
         found_post_id: Number(postId),

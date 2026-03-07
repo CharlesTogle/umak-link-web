@@ -702,11 +702,10 @@ export default function AdminDashboardIndexPage() {
 
   return (
     <section className="h-full overflow-y-auto pr-1 space-y-6">
-      <Card className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <CardContent className="p-4">
-          <h1 className="text-xl font-bold text-[#1D2981]">Graphical Reports</h1>
-        </CardContent>
-      </Card>
+      {/* Page Header */}
+      <div className="flex items-start justify-between">
+        <h1 className="text-3xl font-bold text-[#1D2981]">Dashboard</h1>
+      </div>
 
       <Card className="rounded-3xl border border-slate-200 bg-white shadow-sm">
         <CardContent className="p-4 space-y-4">

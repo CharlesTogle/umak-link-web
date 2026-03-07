@@ -4,10 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CustomToast } from "@/components/ui/custom-toast";
-import { UserCircle2, Trash2, ShieldCheck, Users, UserPlus, Download, CheckSquare, Square, MoreVertical, Pencil, ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
-import Link from "next/link";
+import { UserCircle2, Trash2, ShieldCheck, Users, Download, CheckSquare, Square, MoreVertical, Pencil, ChevronLeft, ChevronRight, Calendar, Clock, Search, Filter, ArrowUpDown } from "lucide-react";
 import type { PortalUserType } from "@/types/auth";
-import { fetchUsers, updateUserRole } from "@/services/admin-service";
+import { fetchUsers, updateUserRole, searchUsers as searchUsersAPI } from "@/services/admin-service";
 import { insertAuditLog } from "@/services/audit-logs-service";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { UserListItem } from "@/types/auth";
@@ -23,9 +22,10 @@ interface UserCardProps {
   isSelected?: boolean;
   onToggleSelect?: (userId: string) => void;
   showCheckbox?: boolean;
+  isHighlighted?: boolean;
 }
 
-function UserCard({ user, isCurrentUser, onRemove, onEdit, isRemoving, isSelected, onToggleSelect, showCheckbox }: UserCardProps) {
+function UserCard({ user, isCurrentUser, onRemove, onEdit, isRemoving, isSelected, onToggleSelect, showCheckbox, isHighlighted }: UserCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const displayName = user.user_name?.trim() || "Unknown User";
@@ -49,9 +49,13 @@ function UserCard({ user, isCurrentUser, onRemove, onEdit, isRemoving, isSelecte
   }, [menuOpen]);
 
   return (
-    <div className={`group rounded-3xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
-      isSelected ? "border-[#1D2981] ring-2 ring-[#1D2981]/20" : "border-slate-200"
-    }`}>
+    <div
+      id={`user-card-${user.user_id}`}
+      className={`group rounded-3xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
+        isSelected ? "border-[#1D2981] ring-2 ring-[#1D2981]/20" :
+        isHighlighted ? "border-yellow-400 ring-4 ring-yellow-400/40 bg-yellow-50/50" :
+        "border-slate-200"
+      }`}>
       <div className="flex items-center gap-4">
         {showCheckbox && !isCurrentUser && (
           <button
@@ -316,6 +320,16 @@ export default function AdminManagementPage() {
   const [totalUsers, setTotalUsers] = useState(0);
   const usersPerPage = 10;
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserListItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [highlightedUserId, setHighlightedUserId] = useState<string | null>(null);
+
+  // Filter and sort state
+  const [roleFilter, setRoleFilter] = useState<"All" | PortalUserType>("All");
+  const [sortBy, setSortBy] = useState<"name" | "email" | "joined" | "lastLogin">("name");
+
   const loadUsers = async () => {
     try {
       setIsLoading(true);
@@ -379,6 +393,55 @@ export default function AdminManagementPage() {
   useEffect(() => {
     loadRegularUsers(currentPage);
   }, [currentPage]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (trimmed.length === 0) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        // First, search local state
+        const allLocalUsers = [...admins, ...staff, ...users];
+        const localMatches = allLocalUsers.filter(
+          (user) =>
+            user.user_name?.toLowerCase().includes(trimmed.toLowerCase()) ||
+            user.email?.toLowerCase().includes(trimmed.toLowerCase())
+        );
+
+        if (localMatches.length > 0) {
+          // Found matches in local state
+          setSearchResults(localMatches);
+          setIsSearching(false);
+        } else {
+          // No local matches, query the database
+          const dbResults = await searchUsersAPI(trimmed);
+          // Map UserSearchResult to UserListItem format
+          const mappedResults: UserListItem[] = dbResults.map((result) => ({
+            user_id: result.user_id,
+            user_name: result.user_name,
+            email: result.email,
+            profile_picture_url: result.profile_picture_url,
+            user_type: result.user_type,
+            created_at: "", // Not available from search
+            last_login: null, // Not available from search
+          }));
+          setSearchResults(mappedResults);
+          setIsSearching(false);
+        }
+      } catch (error) {
+        console.error("Search failed:", error);
+        setSearchResults([]);
+        setIsSearching(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, admins, staff, users]);
 
   // Auto-dismiss toast after 3 seconds
   useEffect(() => {
@@ -535,9 +598,8 @@ export default function AdminManagementPage() {
     });
   }, []);
 
-  const handleSelectAll = useCallback((type: "admin" | "staff") => {
-    const users = type === "admin" ? admins : staff;
-    const selectableUsers = users.filter((u) => u.user_id !== currentUser?.user_id);
+  const handleSelectAll = useCallback((filteredList: UserListItem[]) => {
+    const selectableUsers = filteredList.filter((u) => u.user_id !== currentUser?.user_id);
     const allSelected = selectableUsers.every((u) => selectedUserIds.has(u.user_id));
 
     setSelectedUserIds((prev) => {
@@ -551,7 +613,7 @@ export default function AdminManagementPage() {
       }
       return newSet;
     });
-  }, [admins, staff, currentUser?.user_id, selectedUserIds]);
+  }, [currentUser?.user_id, selectedUserIds]);
 
   const handleClearSelection = useCallback(() => {
     setSelectedUserIds(new Set());
@@ -633,6 +695,24 @@ export default function AdminManagementPage() {
     setCurrentPage(newPage);
   };
 
+  // Handle search result click - scroll to and highlight user
+  const handleSearchResultClick = (userId: string) => {
+    setHighlightedUserId(userId);
+    setSearchQuery("");
+    setSearchResults([]);
+
+    // Scroll to the user card
+    const userCard = document.getElementById(`user-card-${userId}`);
+    if (userCard) {
+      userCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    // Remove highlight after 3 seconds
+    setTimeout(() => {
+      setHighlightedUserId(null);
+    }, 3000);
+  };
+
   // Export to CSV
   const handleExportCSV = useCallback(() => {
     const allUsers = [...admins, ...staff, ...users];
@@ -692,70 +772,87 @@ export default function AdminManagementPage() {
   const hasSelection = selectedCount > 0;
   const totalPages = Math.ceil(totalUsers / usersPerPage);
 
+  // Apply sorting
+  const sortUsers = (userList: UserListItem[]) => {
+    return [...userList].sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return (a.user_name || "").localeCompare(b.user_name || "");
+        case "email":
+          return (a.email || "").localeCompare(b.email || "");
+        case "joined": {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        }
+        case "lastLogin": {
+          const dateA = a.last_login ? new Date(a.last_login).getTime() : 0;
+          const dateB = b.last_login ? new Date(b.last_login).getTime() : 0;
+          return dateB - dateA;
+        }
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const sortedAdmins = sortUsers(admins);
+  const sortedStaff = sortUsers(staff);
+  const sortedUsers = sortUsers(users);
+
   return (
-    <div className="space-y-4">
+    <div className="h-full space-y-4">
       {/* Page Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-[#1D2981]">User Management</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Manage user roles and permissions across the system
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <Button variant="outline" onClick={handleExportCSV} disabled={isLoading}>
-            <Download className="mr-2 size-4" />
-            Export CSV
-          </Button>
-          <Link href="/admin/admin-management/add">
-            <Button className="bg-[#1D2981] hover:bg-[#1D2981]/90">
-              <UserPlus className="mr-2 size-4" />
-              Add Admin/Staff
-            </Button>
-          </Link>
-        </div>
+      <div className="flex items-start justify-between">
+        <h1 className="text-3xl font-bold text-[#1D2981]">User Management</h1>
       </div>
 
-      {/* Batch Action Bar */}
-      {hasSelection && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-in slide-in-from-bottom-4">
-          <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-lg">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <CheckSquare className="size-5 text-[#1D2981]" />
-                <span className="font-medium text-slate-900">
-                  {selectedCount} user{selectedCount !== 1 ? "s" : ""} selected
-                </span>
-              </div>
-              <div className="h-6 w-px bg-slate-200" />
-              <Button variant="ghost" size="sm" onClick={handleClearSelection}>
-                Clear
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setShowBatchConfirm(true)}
-                disabled={isBatchRemoving}
-              >
-                {isBatchRemoving ? (
-                  <>
-                    <div className="mr-2 size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Removing...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="mr-2 size-4" />
-                    Remove Selected
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 2-Column Layout */}
+      <div className="grid h-[calc(100%-5rem)] min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
+        {/* Left Column - User Lists */}
+        <div className="space-y-4 overflow-y-auto pr-1 lg:col-span-8">
 
-      {/* Admin List */}
-      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+          {/* Batch Action Bar */}
+          {hasSelection && (
+            <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-in slide-in-from-bottom-4">
+              <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-lg">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="size-5 text-[#1D2981]" />
+                    <span className="font-medium text-slate-900">
+                      {selectedCount} user{selectedCount !== 1 ? "s" : ""} selected
+                    </span>
+                  </div>
+                  <div className="h-6 w-px bg-slate-200" />
+                  <Button variant="ghost" size="sm" onClick={handleClearSelection}>
+                    Clear
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowBatchConfirm(true)}
+                    disabled={isBatchRemoving}
+                  >
+                    {isBatchRemoving ? (
+                      <>
+                        <div className="mr-2 size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Removing...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="mr-2 size-4" />
+                        Remove Selected
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Admin List */}
+          {(roleFilter === "All" || roleFilter === "Admin") && (
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -765,19 +862,19 @@ export default function AdminManagementPage() {
               <div>
                 <CardTitle className="text-xl font-semibold text-slate-900">Administrators</CardTitle>
                 <p className="text-sm text-slate-500">
-                  {isLoading ? "Loading..." : `${admins.length} admin${admins.length !== 1 ? "s" : ""}`}
+                  {isLoading ? "Loading..." : `${sortedAdmins.length} admin${sortedAdmins.length !== 1 ? "s" : ""}`}
                 </p>
               </div>
             </div>
-            {admins.length > 0 && !isLoading && (
+            {sortedAdmins.length > 0 && !isLoading && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleSelectAll("admin")}
+                onClick={() => handleSelectAll(sortedAdmins)}
                 className="text-sm text-slate-600 hover:text-[#1D2981]"
               >
-                {admins.filter((a) => a.user_id !== currentUser?.user_id && selectedUserIds.has(a.user_id)).length ===
-                admins.filter((a) => a.user_id !== currentUser?.user_id).length
+                {sortedAdmins.filter((a) => a.user_id !== currentUser?.user_id && selectedUserIds.has(a.user_id)).length ===
+                sortedAdmins.filter((a) => a.user_id !== currentUser?.user_id).length
                   ? "Deselect All"
                   : "Select All"}
               </Button>
@@ -790,7 +887,7 @@ export default function AdminManagementPage() {
               <UserCardSkeleton />
               <UserCardSkeleton />
             </div>
-          ) : admins.length === 0 ? (
+          ) : sortedAdmins.length === 0 ? (
             <div className="grid place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-12">
               <div className="text-center">
                 <ShieldCheck className="mx-auto mb-3 size-12 text-slate-300" />
@@ -799,7 +896,7 @@ export default function AdminManagementPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {admins.map((admin) => (
+              {sortedAdmins.map((admin) => (
                 <UserCard
                   key={admin.user_id}
                   user={admin}
@@ -810,15 +907,18 @@ export default function AdminManagementPage() {
                   showCheckbox
                   isSelected={selectedUserIds.has(admin.user_id)}
                   onToggleSelect={handleToggleSelect}
+                  isHighlighted={highlightedUserId === admin.user_id}
                 />
               ))}
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
+          )}
 
-      {/* Staff List */}
-      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+          {/* Staff List */}
+          {(roleFilter === "All" || roleFilter === "Staff") && (
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -828,18 +928,18 @@ export default function AdminManagementPage() {
               <div>
                 <CardTitle className="text-xl font-semibold text-slate-900">Staff Members</CardTitle>
                 <p className="text-sm text-slate-500">
-                  {isLoading ? "Loading..." : `${staff.length} staff member${staff.length !== 1 ? "s" : ""}`}
+                  {isLoading ? "Loading..." : `${sortedStaff.length} staff member${sortedStaff.length !== 1 ? "s" : ""}`}
                 </p>
               </div>
             </div>
-            {staff.length > 0 && !isLoading && (
+            {sortedStaff.length > 0 && !isLoading && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleSelectAll("staff")}
+                onClick={() => handleSelectAll(sortedStaff)}
                 className="text-sm text-slate-600 hover:text-[#1D2981]"
               >
-                {staff.filter((s) => selectedUserIds.has(s.user_id)).length === staff.length
+                {sortedStaff.filter((s) => selectedUserIds.has(s.user_id)).length === sortedStaff.length
                   ? "Deselect All"
                   : "Select All"}
               </Button>
@@ -853,7 +953,7 @@ export default function AdminManagementPage() {
               <UserCardSkeleton />
               <UserCardSkeleton />
             </div>
-          ) : staff.length === 0 ? (
+          ) : sortedStaff.length === 0 ? (
             <div className="grid place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-12">
               <div className="text-center">
                 <Users className="mx-auto mb-3 size-12 text-slate-300" />
@@ -862,7 +962,7 @@ export default function AdminManagementPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {staff.map((staffMember) => (
+              {sortedStaff.map((staffMember) => (
                 <UserCard
                   key={staffMember.user_id}
                   user={staffMember}
@@ -873,15 +973,18 @@ export default function AdminManagementPage() {
                   showCheckbox
                   isSelected={selectedUserIds.has(staffMember.user_id)}
                   onToggleSelect={handleToggleSelect}
+                  isHighlighted={highlightedUserId === staffMember.user_id}
                 />
               ))}
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
+          )}
 
-      {/* Regular Users List (Paginated) */}
-      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+          {/* Regular Users List (Paginated) */}
+          {(roleFilter === "All" || roleFilter === "User") && (
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -895,31 +998,31 @@ export default function AdminManagementPage() {
                 </p>
               </div>
             </div>
-            {users.length > 0 && !isLoadingUsers && (
+            {sortedUsers.length > 0 && !isLoadingUsers && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  const selectableUsers = users.filter((u) => !selectedUserIds.has(u.user_id));
+                  const selectableUsers = sortedUsers.filter((u) => !selectedUserIds.has(u.user_id));
                   if (selectableUsers.length === 0) {
                     // Deselect all on current page
                     setSelectedUserIds((prev) => {
                       const newSet = new Set(prev);
-                      users.forEach((u) => newSet.delete(u.user_id));
+                      sortedUsers.forEach((u) => newSet.delete(u.user_id));
                       return newSet;
                     });
                   } else {
                     // Select all on current page
                     setSelectedUserIds((prev) => {
                       const newSet = new Set(prev);
-                      users.forEach((u) => newSet.add(u.user_id));
+                      sortedUsers.forEach((u) => newSet.add(u.user_id));
                       return newSet;
                     });
                   }
                 }}
                 className="text-sm text-slate-600 hover:text-[#1D2981]"
               >
-                {users.every((u) => selectedUserIds.has(u.user_id)) ? "Deselect Page" : "Select Page"}
+                {sortedUsers.every((u) => selectedUserIds.has(u.user_id)) ? "Deselect Page" : "Select Page"}
               </Button>
             )}
           </div>
@@ -931,7 +1034,7 @@ export default function AdminManagementPage() {
               <UserCardSkeleton />
               <UserCardSkeleton />
             </div>
-          ) : users.length === 0 ? (
+          ) : sortedUsers.length === 0 ? (
             <div className="grid place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-12">
               <div className="text-center">
                 <UserCircle2 className="mx-auto mb-3 size-12 text-slate-300" />
@@ -941,7 +1044,7 @@ export default function AdminManagementPage() {
           ) : (
             <>
               <div className="space-y-3">
-                {users.map((user) => (
+                {sortedUsers.map((user) => (
                   <UserCard
                     key={user.user_id}
                     user={user}
@@ -952,6 +1055,7 @@ export default function AdminManagementPage() {
                     showCheckbox
                     isSelected={selectedUserIds.has(user.user_id)}
                     onToggleSelect={handleToggleSelect}
+                    isHighlighted={highlightedUserId === user.user_id}
                   />
                 ))}
               </div>
@@ -960,7 +1064,7 @@ export default function AdminManagementPage() {
               {totalPages > 1 && (
                 <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
                   <p className="text-sm text-slate-600">
-                    Page {currentPage} of {totalPages} • Showing {users.length} of {totalUsers}
+                    Page {currentPage} of {totalPages} • Showing {sortedUsers.length} of {totalUsers}
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -987,7 +1091,169 @@ export default function AdminManagementPage() {
             </>
           )}
         </CardContent>
-      </Card>
+          </Card>
+          )}
+        </div>
+
+        {/* Right Column - Search, Filters, Sort */}
+        <div className="space-y-4 overflow-y-auto pr-1 lg:col-span-4">
+          {/* Export Button */}
+          <Button
+            onClick={handleExportCSV}
+            disabled={isLoading}
+            className="w-full bg-[#1D2981] hover:bg-[#1D2981]/90"
+          >
+            <Download className="mr-2 size-4" />
+            Export CSV
+          </Button>
+
+          {/* Search Bar */}
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-slate-900">Search Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="relative">
+                <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                  <Search className="size-5 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by name or email..."
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-[#1D2981] focus:outline-none focus:ring-2 focus:ring-[#1D2981]/20"
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="size-5 animate-spin rounded-full border-2 border-[#1D2981] border-t-transparent" />
+                  </div>
+                )}
+              </div>
+
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && (
+                <div className="mt-3 max-h-96 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2">
+                  <p className="px-2 text-xs font-medium text-slate-500">
+                    {searchResults.length} result{searchResults.length !== 1 ? "s" : ""}
+                  </p>
+                  {searchResults.map((user) => (
+                    <button
+                      key={user.user_id}
+                      type="button"
+                      onClick={() => handleSearchResultClick(user.user_id)}
+                      className="flex w-full items-center gap-3 rounded-lg border border-transparent bg-slate-50 p-2 text-left transition hover:border-[#1D2981] hover:bg-[#1D2981]/5"
+                    >
+                      <div className="size-10 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-white">
+                        {user.profile_picture_url ? (
+                          <Image
+                            src={user.profile_picture_url}
+                            alt={user.user_name || "User"}
+                            width={40}
+                            height={40}
+                            unoptimized
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <div className="grid size-full place-items-center">
+                            <UserCircle2 className="size-8 text-slate-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-900">
+                          {user.user_name || "Unknown"}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">{user.email}</p>
+                        <p className="mt-0.5 text-xs font-medium text-[#1D2981]">{user.user_type}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {searchQuery.trim().length > 0 && !isSearching && searchResults.length === 0 && (
+                <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
+                  <p className="text-xs text-slate-500">No users found</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Filters */}
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                <Filter className="size-4" />
+                Filter by Role
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {(["All", "Admin", "Staff", "User"] as const).map((role) => (
+                  <label
+                    key={role}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                      roleFilter === role
+                        ? "border-[#1D2981] bg-[#1D2981]/5"
+                        : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="roleFilter"
+                      value={role}
+                      checked={roleFilter === role}
+                      onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
+                      className="size-4 accent-[#1D2981]"
+                    />
+                    <span className="text-sm font-medium text-slate-900">{role}</span>
+                  </label>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sort */}
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                <ArrowUpDown className="size-4" />
+                Sort by
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {[
+                  { value: "name" as const, label: "Name" },
+                  { value: "email" as const, label: "Email" },
+                  { value: "joined" as const, label: "Date Joined" },
+                  { value: "lastLogin" as const, label: "Last Login" },
+                ].map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                      sortBy === option.value
+                        ? "border-[#1D2981] bg-[#1D2981]/5"
+                        : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="sortBy"
+                      value={option.value}
+                      checked={sortBy === option.value}
+                      onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                      className="size-4 accent-[#1D2981]"
+                    />
+                    <span className="text-sm font-medium text-slate-900">{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Confirm Remove Modal */}
       <ConfirmRemoveModal

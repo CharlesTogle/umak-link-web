@@ -804,7 +804,10 @@ export default function AdminManagementPage() {
     <div className="h-full space-y-4">
       {/* Page Header */}
       <div className="flex items-start justify-between">
-        <h1 className="text-3xl font-bold text-[#1D2981]">User Management</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-[#1D2981]">User Management</h1>
+          <p className="mt-1 text-sm text-slate-600">Manage user roles, permissions, and accounts across the system.</p>
+        </div>
       </div>
 
       {/* 2-Column Layout */}

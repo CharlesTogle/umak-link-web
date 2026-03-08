@@ -417,7 +417,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
         </div>
       </article>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-12 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-12 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
       <article className="min-h-0 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-4 lg:col-start-9 lg:row-start-1">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -563,6 +563,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
 
       <article className="min-h-0 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-4 lg:col-start-9 lg:row-start-2">
         <h2 className="text-lg font-semibold text-slate-900">Post Details</h2>
+        <p className="mt-1 text-sm text-slate-600">Submission and acceptance information for this post.</p>
         <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-slate-600">
           <p>
             <span className="font-medium text-slate-700">Item Type:</span> {toDisplayLabel(record.item_type)}
@@ -585,6 +586,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
         </div>
 
         <h3 className="mt-5 text-lg font-semibold text-slate-900">Poster Details</h3>
+        <p className="mt-1 text-sm text-slate-600">Contact information of the user who posted this item.</p>
         <div className="mt-2 text-sm text-slate-600">
           <p>
             <span className="font-medium text-slate-700">Name:</span> {record.poster_name}
@@ -599,6 +601,11 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
             <h3 className="text-lg font-semibold text-slate-900">
               {normalizedItemStatus === "returned" ? "Return Details" : "Claim Details"}
             </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              {normalizedItemStatus === "returned"
+                ? "Information about who returned this item and when."
+                : "Information about who claimed this item and when."}
+            </p>
 
             {record.claimer_name && normalizedItemStatus !== "unclaimed" ? (
               <div className="mt-3 text-sm text-slate-600">

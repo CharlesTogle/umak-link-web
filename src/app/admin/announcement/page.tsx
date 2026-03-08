@@ -227,7 +227,10 @@ export default function AdminAnnouncementPage() {
       <div className="h-full space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-[#1D2981]">Announcements</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-[#1D2981]">Announcements</h1>
+            <p className="mt-1 text-sm text-slate-600">Create and manage system-wide announcements for all users.</p>
+          </div>
           <Button onClick={handleRefresh} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
             Refresh

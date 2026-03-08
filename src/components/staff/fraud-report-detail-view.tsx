@@ -275,7 +275,7 @@ export function FraudReportDetailView({ reportId }: { reportId: string }) {
         </div>
       </article>
 
-      <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-12">
       <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-8 lg:col-start-1">
         <div className="mb-3 flex items-center gap-3">
           <div className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-slate-500">
@@ -447,6 +447,7 @@ export function FraudReportDetailView({ reportId }: { reportId: string }) {
 
         <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Claim Credentials</h2>
+          <p className="mt-1 text-sm text-slate-600">Information about the claimer and staff who processed the claim.</p>
           <div className="mt-3 space-y-4 text-sm text-slate-600">
             <div>
               <p className="font-semibold text-slate-800">Claimer</p>

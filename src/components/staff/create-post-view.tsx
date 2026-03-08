@@ -364,7 +364,7 @@ export function CreatePostView() {
   }
 
   return (
-    <section className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
+    <section className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-12">
       <div className="min-h-0 space-y-4 overflow-y-auto pr-1 lg:col-span-8">
         <div>
           <h1 className="text-3xl font-bold text-[#1D2981]">Create Staff Post</h1>
@@ -551,9 +551,9 @@ export function CreatePostView() {
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-sm font-semibold text-[#1D2981]">Submission Rules</p>
           <ul className="mt-3 space-y-2 text-sm text-slate-600">
-            <li>All required fields must be complete.</li>
-            <li>Staff create-post uses item type: found.</li>
-            <li>Image uploads are converted to WebP before storage.</li>
+            <li>Please fill out all required fields before submitting.</li>
+            <li>Staff posts are automatically marked as found items.</li>
+            <li>Images will be automatically converted to WebP format for faster loading.</li>
           </ul>
         </div>
 

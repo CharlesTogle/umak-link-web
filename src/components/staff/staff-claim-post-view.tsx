@@ -379,10 +379,11 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
           </div>
         </article>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-12">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-12">
           {/* Main Content - Found Item */}
           <article className="min-h-0 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-7">
             <h2 className="mb-3 text-lg font-semibold text-[#1D2981]">Item to be Claimed</h2>
+            <p className="mb-3 text-sm text-slate-600">Review the found item details before processing the claim.</p>
 
             <div className="mb-3 flex items-center gap-3">
               <div className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-slate-500">

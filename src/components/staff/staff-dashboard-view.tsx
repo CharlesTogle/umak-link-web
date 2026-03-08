@@ -194,7 +194,7 @@ export function StaffDashboardView() {
   };
 
   return (
-    <section className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
+    <section className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-12">
       <div
         ref={feedRef}
         onScroll={handleScroll}
@@ -203,6 +203,7 @@ export function StaffDashboardView() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl font-bold text-[#1D2981]">Staff Dashboard</h1>
+            <p className="mt-1 text-sm text-slate-600">Review and manage pending posts submitted by users.</p>
             <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
               <span>View mode:</span>
               <PostTagChip

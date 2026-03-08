@@ -96,7 +96,7 @@ export function StaffSidebar() {
             const active = isActive(pathname, route.href);
             return (
               <div key={route.href} className="space-y-1">
-                <div className="flex items-center justify-between">
+                <div className="mr-2 flex items-center justify-between">
                   <Link
                     href={route.href}
                     className={`flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${

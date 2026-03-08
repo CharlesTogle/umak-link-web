@@ -259,7 +259,7 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
     results.length === 0;
 
   return (
-    <section className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
+    <section className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-12">
       <div className="min-h-0 space-y-4 overflow-y-auto pr-1 lg:col-span-8">
         <div>
           <h1 className="text-3xl font-bold text-[#1D2981]">Search</h1>

@@ -237,7 +237,7 @@ export function PostRecordsView() {
   };
 
   return (
-    <section className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
+    <section className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-12">
       <div
         ref={feedRef}
         onScroll={handleScroll}

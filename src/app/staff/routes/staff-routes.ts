@@ -5,7 +5,6 @@ import {
   ShieldAlert,
   Search,
   PlusSquare,
-  Bell,
 } from "lucide-react";
 
 export type StaffRouteItem = {
@@ -49,6 +48,4 @@ export const staffPrimaryRoutes: StaffRouteGroup[] = [
   { label: "Create Post", href: "/staff/post/create", icon: PlusSquare },
 ];
 
-export const staffSecondaryRoutes: StaffRouteItem[] = [
-  { label: "Notifications", href: "/staff/notifications", icon: Bell },
-];
+export const staffSecondaryRoutes: StaffRouteItem[] = [];

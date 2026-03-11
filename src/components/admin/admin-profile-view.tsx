@@ -6,6 +6,7 @@ import { LogOut, UserCircle2 } from "lucide-react";
 import { useMemo } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useAuthStore } from "@/stores/auth-store";
+import { UpdatePictureFromGoogleButton } from "@/components/profile/update-picture-from-google-button";
 
 export function AdminProfileView() {
   const router = useRouter();
@@ -51,6 +52,10 @@ export function AdminProfileView() {
             <p className="text-xs uppercase tracking-wide text-slate-500">{profileRole}</p>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <UpdatePictureFromGoogleButton />
       </div>
 
       <div className="rounded-3xl border border-rose-200 bg-white p-5 shadow-sm">

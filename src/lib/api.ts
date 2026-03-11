@@ -14,3 +14,13 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === "ECONNABORTED" && error.message?.includes("timeout")) {
+      error.message = "Request timeout exceeded (20s). Please check your connection and try again.";
+    }
+    return Promise.reject(error);
+  }
+);

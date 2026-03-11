@@ -3,7 +3,8 @@ import { getStoredToken } from "@/lib/token-storage";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
-  timeout: 20000, // 20 seconds for login and other operations
+  timeout: 0, // No timeout - let requests complete naturally
+  withCredentials: true, // Required for CORS with credentials
 });
 
 api.interceptors.request.use((config) => {
@@ -19,7 +20,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.code === "ECONNABORTED" && error.message?.includes("timeout")) {
-      error.message = "Request timeout exceeded (20s). Please check your connection and try again.";
+      error.message = "Request timeout. Please check your connection and try again.";
     }
     return Promise.reject(error);
   }

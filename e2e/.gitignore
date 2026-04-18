@@ -1,0 +1,10 @@
+# Test reports
+playwright-report/
+test-results/
+*.zip
+
+# Playwright
+.auth/
+
+# OS
+.DS_Store

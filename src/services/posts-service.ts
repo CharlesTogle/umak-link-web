@@ -11,6 +11,7 @@ interface ListPostsParams {
   type?: "public" | "pending" | "staff" | "own";
   item_type?: "found" | "missing";
   status?: string;
+  item_status?: string;
   poster_id?: string;
   item_id?: string;
   linked_item_id?: string;

@@ -58,7 +58,7 @@ export function AdminSidebar() {
   return (
     <aside className="m-4 flex h-[calc(100vh-2rem)] w-80 shrink-0">
       <div className="flex w-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Umak Link</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">UMak LINK</p>
         <h2 className="mb-4 text-lg font-semibold text-slate-900">Admin Portal</h2>
 
         <nav className="space-y-2 overflow-auto pr-1">

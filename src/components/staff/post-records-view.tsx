@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCcw, Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PostRecordCard } from "@/components/staff/post-record-card";
 import { CustomToast } from "@/components/ui/custom-toast";
-import { toTimestampMillis } from "@/lib/date-time-helpers";
 import { useStaffPostRecordsStore } from "@/stores/staff-post-records-store";
 import { sendNotification } from "@/services/notifications-service";
 import type {
@@ -58,29 +57,22 @@ const sortOptions: Array<{ label: string; value: PostRecordSortDirection }> = [
   { label: "Oldest Upload (Asc)", value: "asc" },
 ];
 
-function getSortValue(record: PostRecord): number {
-  return toTimestampMillis(record.submissionDate);
-}
-
 export function PostRecordsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { records, isLoading, isRefreshing, error, hasMore, fetchRecords, loadMore, refresh } =
     useStaffPostRecordsStore();
 
-  const filterFromUrl = searchParams.get("filter");
   const getFiltersFromUrl = (): PostRecordFilters => {
-    switch (filterFromUrl) {
-      case "pending":
-        return { postStatus: "Pending", itemStatus: "all", itemType: "all" };
-      case "claimed":
-        return { postStatus: "all", itemStatus: "Claimed", itemType: "all" };
-      case "archived":
-        return { postStatus: "Rejected", itemStatus: "all", itemType: "all" };
-      case "all":
-      default:
-        return { postStatus: "all", itemStatus: "all", itemType: "all" };
-    }
+    const postStatus = searchParams.get("postStatus") as PostRecordFilters["postStatus"] | null;
+    const itemStatus = searchParams.get("itemStatus") as PostRecordFilters["itemStatus"] | null;
+    const itemType = searchParams.get("itemType") as PostRecordFilters["itemType"] | null;
+
+    return {
+      postStatus: postStatus ?? "all",
+      itemStatus: itemStatus ?? "all",
+      itemType: itemType ?? "all",
+    };
   };
 
   const filters = getFiltersFromUrl();
@@ -94,14 +86,15 @@ export function PostRecordsView() {
     const newFilters = { ...filters, [key]: value };
     const params = new URLSearchParams();
 
-    if (newFilters.postStatus === "Pending" && newFilters.itemStatus === "all") {
-      params.set("filter", "pending");
-    } else if (newFilters.itemStatus === "Claimed" && newFilters.postStatus === "all") {
-      params.set("filter", "claimed");
-    } else if (newFilters.postStatus === "Rejected" && newFilters.itemStatus === "all") {
-      params.set("filter", "archived");
-    } else {
-      params.set("filter", "all");
+    // Save each filter independently
+    if (newFilters.postStatus !== "all") {
+      params.set("postStatus", newFilters.postStatus);
+    }
+    if (newFilters.itemStatus !== "all") {
+      params.set("itemStatus", newFilters.itemStatus);
+    }
+    if (newFilters.itemType !== "all") {
+      params.set("itemType", newFilters.itemType);
     }
 
     router.push(`/staff/post-records?${params.toString()}`);
@@ -113,30 +106,18 @@ export function PostRecordsView() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const filteredRecords = useMemo(() => {
-    const matchesFilters = (record: PostRecord) => {
-      const matchesPostStatus = filters.postStatus === "all" || record.postStatus === filters.postStatus;
-      const matchesItemStatus = filters.itemStatus === "all" || record.itemStatus === filters.itemStatus;
-      const matchesItemType = filters.itemType === "all" || record.itemType === filters.itemType;
-      return matchesPostStatus && matchesItemStatus && matchesItemType;
-    };
-
-    const filtered = records.filter(matchesFilters);
-    const sorted = [...filtered].sort((a, b) => {
-      const diff = getSortValue(a) - getSortValue(b);
-      return sortDir === "asc" ? diff : -diff;
-    });
-    return sorted;
-  }, [filters, records, sortDir]);
+  // Backend handles all filtering and sorting, so we can use records directly
+  const filteredRecords = records;
 
   useEffect(() => {
     fetchRecords({
       ...(filters.itemType !== "all" ? { itemType: filters.itemType } : {}),
       postStatus: filters.postStatus === "all" ? null : filters.postStatus.toLowerCase(),
+      itemStatus: filters.itemStatus === "all" ? null : filters.itemStatus.toLowerCase(),
       sortDirection: sortDir,
       pageSize: 10,
     });
-  }, [fetchRecords, filters.itemType, filters.postStatus, sortDir]);
+  }, [fetchRecords, filters.itemType, filters.postStatus, filters.itemStatus, sortDir]);
 
   const handleRefresh = () => {
     refresh();

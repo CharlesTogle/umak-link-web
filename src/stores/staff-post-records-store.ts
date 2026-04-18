@@ -6,6 +6,7 @@ import type { PostRecord } from "@/types/post-record";
 interface StaffPostRecordsParams {
   itemType?: "found" | "missing";
   postStatus?: string | null;
+  itemStatus?: string | null;
   sortDirection?: "asc" | "desc";
   pageSize?: number;
 }
@@ -49,6 +50,7 @@ export const useStaffPostRecordsStore = create<StaffPostRecordsStore>((set, get)
       const response = await listPosts({
         ...(params.itemType ? { item_type: params.itemType } : {}),
         ...(params.postStatus ? { status: params.postStatus } : {}),
+        ...(params.itemStatus ? { item_status: params.itemStatus } : {}),
         limit: pageSize,
         offset: 0,
         order_by: "submission_date",
@@ -79,6 +81,7 @@ export const useStaffPostRecordsStore = create<StaffPostRecordsStore>((set, get)
       const response = await listPosts({
         ...(params.itemType ? { item_type: params.itemType } : {}),
         ...(params.postStatus ? { status: params.postStatus } : {}),
+        ...(params.itemStatus ? { item_status: params.itemStatus } : {}),
         limit: pageSize,
         offset,
         order_by: "submission_date",

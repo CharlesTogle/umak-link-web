@@ -66,10 +66,10 @@ export async function getPaginationInfo(page: Page): Promise<{
   const match = paginationText?.match(/Page (\d+) of (\d+)/) || null;
 
   return {
-    currentPage: match ? parseInt(match[1], 10) : 1,
-    totalPages: match ? parseInt(match[2], 10) : 1,
-    hasNextPage: match ? parseInt(match[1], 10) < parseInt(match[2], 10) : false,
-    hasPreviousPage: match ? parseInt(match[1], 10) > 1 : false,
+    currentPage: match ? parseInt(match[1]!, 10) : 1,
+    totalPages: match ? parseInt(match[2]!, 10) : 1,
+    hasNextPage: match ? parseInt(match[1]!, 10) < parseInt(match[2]!, 10) : false,
+    hasPreviousPage: match ? parseInt(match[1]!, 10) > 1 : false,
   };
 }
 

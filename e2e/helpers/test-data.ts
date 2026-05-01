@@ -62,9 +62,9 @@ export function createMockPost(overrides?: Partial<PostRecord>): PostRecord {
   const categories = TEST_CONSTANTS.VALID_CATEGORIES;
   const category = categories[Math.floor(Math.random() * categories.length)] || 'Other';
   const itemTypes = ['missing', 'found'] as const;
-  const itemType = itemTypes[Math.floor(Math.random() * 2)];
+  const itemType = itemTypes[Math.floor(Math.random() * 2)]!;
   const itemStatuses = ['Claimed', 'Unclaimed', 'Lost', 'Returned'] as const;
-  const itemStatus = itemStatuses[Math.floor(Math.random() * 4)];
+  const itemStatus = itemStatuses[Math.floor(Math.random() * 4)]!;
 
   return {
     postId: `post-${Date.now()}-${Math.random()}`,

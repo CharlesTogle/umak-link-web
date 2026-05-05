@@ -18,11 +18,13 @@ export default function StaffNotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
 
+  const userId = user?.user_id;
+
   useEffect(() => {
-    if (!userLoading && user) {
+    if (!userLoading && userId) {
       loadNotifications();
     }
-  }, [user, userLoading]);
+  }, [userId, userLoading]);
 
   const loadNotifications = async () => {
     try {

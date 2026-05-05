@@ -1,4 +1,5 @@
 import axios from "axios";
+import { supabase } from "@/lib/supabase";
 import { getStoredToken } from "@/lib/token-storage";
 
 export const api = axios.create({
@@ -7,12 +8,15 @@ export const api = axios.create({
   withCredentials: true, // Required for CORS with credentials
 });
 
-api.interceptors.request.use((config) => {
-  const token = getStoredToken();
+api.interceptors.request.use(async (config) => {
+  const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+  const token = session?.access_token ?? getStoredToken();
+
   if (token) {
     config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 

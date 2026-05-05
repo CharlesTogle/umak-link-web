@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { clearStoredToken, getStoredToken, getStoredTokenRole } from "@/lib/token-storage";
+import { supabase } from "@/lib/supabase";
 import type { AuthUser } from "@/types/auth";
 import { fetchCurrentUser, getAuthErrorMessage, isUnauthorizedError } from "@/services/auth-service";
 
@@ -29,7 +30,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const { status, hasFetched } = get();
     if (!force && (status === "loading" || hasFetched)) return;
 
-    const token = getStoredToken();
+    const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+    const token = session?.access_token ?? getStoredToken();
     if (!token) {
       set({
         user: null,
@@ -58,6 +60,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     } catch (error) {
       if (isUnauthorizedError(error)) {
         clearStoredToken();
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
       }
 
       set({
@@ -79,6 +84,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   clearSession: () => {
     clearStoredToken();
+    if (supabase) {
+      void supabase.auth.signOut();
+    }
     set(initialState);
   },
 }));

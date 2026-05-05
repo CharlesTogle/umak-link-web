@@ -3,15 +3,34 @@
 import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
 import { getRoleHomePathFromUserType } from "@/lib/role-routing";
-import { setStoredToken } from "@/lib/token-storage";
+import { getSupabaseClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
+import { fetchCurrentUser } from "@/services/auth-service";
 import type { AuthUser } from "@/types/auth";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
 
 const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+function decodeGoogleCredentialPayload(credential: string): Record<string, unknown> | null {
+  const payloadPart = credential.split(".")[1];
+  if (!payloadPart) return null;
+
+  try {
+    const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+    const parsed = JSON.parse(window.atob(padded)) as unknown;
+
+    if (typeof parsed === "object" && parsed !== null) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
 
 export default function GoogleLoginButton() {
   const router = useRouter();
@@ -33,16 +52,23 @@ export default function GoogleLoginButton() {
     setError(null);
 
     try {
-      const response = await api.post("/auth/google", {
-        googleIdToken: credential,
-      });
-
-      const token = response.data?.token as string | undefined;
-      if (!token) {
-        throw new Error("No token returned from server.");
+      const payload = decodeGoogleCredentialPayload(credential);
+      const email = typeof payload?.email === "string" ? payload.email.trim().toLowerCase() : null;
+      if (!email?.endsWith("@umak.edu.ph")) {
+        throw new Error("Please use your organization email to sign in.");
       }
 
-      const currentUser = response.data?.user as AuthUser | undefined;
+      const supabase = getSupabaseClient();
+      const { error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: credential,
+      });
+
+      if (signInError) {
+        throw signInError;
+      }
+
+      const currentUser = (await fetchCurrentUser()) as AuthUser | undefined;
       const nextPath = getRoleHomePathFromUserType(currentUser?.user_type);
 
       if (!currentUser || !nextPath) {
@@ -59,7 +85,6 @@ export default function GoogleLoginButton() {
         return;
       }
 
-      setStoredToken(token, currentUser.user_type);
       setAuthenticatedUser(currentUser);
       setStatus("success");
       router.replace(nextPath);

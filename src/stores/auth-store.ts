@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { clearStoredToken, getStoredToken, getStoredTokenRole } from "@/lib/token-storage";
+import { clearStoredToken } from "@/lib/token-storage";
 import { supabase } from "@/lib/supabase";
 import type { AuthUser } from "@/types/auth";
 import { fetchCurrentUser, getAuthErrorMessage, isUnauthorizedError } from "@/services/auth-service";
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!force && (status === "loading" || hasFetched)) return;
 
     const session = supabase ? (await supabase.auth.getSession()).data.session : null;
-    const token = session?.access_token ?? getStoredToken();
+    const token = session?.access_token;
     if (!token) {
       set({
         user: null,
@@ -45,14 +45,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ status: "loading", error: null });
     try {
       const user = await fetchCurrentUser();
-      const tokenRole = getStoredTokenRole();
-      const resolvedUser =
-        user.user_type === "User" && tokenRole
-          ? { ...user, user_type: tokenRole }
-          : user;
 
       set({
-        user: resolvedUser,
+        user,
         status: "ready",
         error: null,
         hasFetched: true,

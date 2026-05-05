@@ -1,2 +1,11 @@
 __pycache__/
 *.pyc
+.codex
+.claude
+.env
+.env.example
+node_modules/
+next-end.d.ts
+tsconfig.tsbuildinfo
+dist/
+.next/

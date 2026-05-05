@@ -1,5 +1,6 @@
 const TOKEN_KEY = "umak_link_web_api_token";
 const ROLE_KEY = "umak_link_web_role";
+const SIXTY_DAYS_IN_SECONDS = 60 * 60 * 24 * 60;
 
 function canUseBrowserStorage(): boolean {
   return typeof window !== "undefined";

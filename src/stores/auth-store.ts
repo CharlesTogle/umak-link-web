@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { clearStoredToken } from "@/lib/token-storage";
+import { clearStoredToken, getStoredToken } from "@/lib/token-storage";
 import { supabase } from "@/lib/supabase";
 import type { AuthUser } from "@/types/auth";
 import { fetchCurrentUser, getAuthErrorMessage, isUnauthorizedError } from "@/services/auth-service";
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!force && (status === "loading" || hasFetched)) return;
 
     const session = supabase ? (await supabase.auth.getSession()).data.session : null;
-    const token = session?.access_token;
+    const token = session?.access_token ?? getStoredToken();
     if (!token) {
       set({
         user: null,

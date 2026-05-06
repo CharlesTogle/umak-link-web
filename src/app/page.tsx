@@ -1,5 +1,6 @@
 import Image from "next/image";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import { HomeAuthRedirect } from "@/components/auth/home-auth-redirect";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardCheck, ShieldCheck, UserCog, BellRing } from "lucide-react";
@@ -14,6 +15,8 @@ const modules = [
 export default function Home() {
   return (
     <main className="relative min-h-screen bg-slate-950">
+      <HomeAuthRedirect />
+
       <section className="absolute inset-0">
         <Image
           src="/images/umak-admin-building.jpg"

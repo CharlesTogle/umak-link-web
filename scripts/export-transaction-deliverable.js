@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
+const readline = require("readline");
 const { spawn } = require("child_process");
 const { chromium } = require("@playwright/test");
 
@@ -12,6 +13,9 @@ const DEFAULT_OUTPUT_DIR = path.resolve(ROOT, "..", "ELECTIVE", "generated-deliv
 const DEFAULT_DOCX = path.join(DEFAULT_OUTPUT_DIR, "Deliverable-No3_Auto.docx");
 const DEFAULT_MANIFEST = path.join(DEFAULT_OUTPUT_DIR, "transaction-manifest.json");
 const DEFAULT_SCREENSHOT_DIR = path.join(DEFAULT_OUTPUT_DIR, "screenshots");
+const DEFAULT_AUTH_DIR = path.join(DEFAULT_OUTPUT_DIR, "auth");
+const DEFAULT_ADMIN_STATE = path.join(DEFAULT_AUTH_DIR, "admin-storage-state.json");
+const DEFAULT_STAFF_STATE = path.join(DEFAULT_AUTH_DIR, "staff-storage-state.json");
 const DEFAULT_PORT = process.env.CAPTURE_PORT || "3100";
 const DEFAULT_BASE_URL = process.env.CAPTURE_BASE_URL || `http://localhost:${DEFAULT_PORT}`;
 const PYTHON_BIN = process.env.DOCX_PYTHON || path.resolve(ROOT, "..", ".venv-docx", "bin", "python");
@@ -69,6 +73,10 @@ function parseArgs(argv) {
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function fileExists(filePath) {
+  return fs.existsSync(filePath);
 }
 
 function createMockJWT(user) {
@@ -374,7 +382,12 @@ function buildData() {
   };
 }
 
-function buildSections() {
+function buildSections(args = {}) {
+  const foundPostId = args["found-post-id"] || "101";
+  const missingPostId = args["missing-post-id"] || "102";
+  const claimPostId = args["claim-post-id"] || foundPostId;
+  const fraudReportId = args["fraud-report-id"] || "FR-2001";
+
   return [
     {
       title: "A. ADMIN DASHBOARD",
@@ -423,7 +436,7 @@ function buildSections() {
         {
           name: "staff-post-status-modal",
           role: "staff",
-          route: "/staff/post-record/view/101",
+          route: `/staff/post-record/view/${foundPostId}`,
           beforeScreenshot: async (page) => {
             await page.getByRole("button", { name: /change status/i }).click();
             await page.waitForTimeout(300);
@@ -432,7 +445,7 @@ function buildSections() {
         {
           name: "staff-notify-owner-modal",
           role: "staff",
-          route: "/staff/post-record/view/102",
+          route: `/staff/post-record/view/${missingPostId}`,
           beforeScreenshot: async (page) => {
             await page.getByRole("button", { name: /notify owner/i }).click();
             await page.waitForTimeout(300);
@@ -441,7 +454,7 @@ function buildSections() {
         {
           name: "staff-claim-process",
           role: "staff",
-          route: "/staff/post/claim/101",
+          route: `/staff/post/claim/${claimPostId}`,
         },
       ],
     },
@@ -458,7 +471,7 @@ function buildSections() {
         {
           name: "staff-fraud-report-detail",
           role: "staff",
-          route: "/staff/fraud-report/view/FR-2001",
+          route: `/staff/fraud-report/view/${fraudReportId}`,
         },
         {
           name: "staff-notifications",
@@ -513,6 +526,25 @@ function startDevServer(port) {
   });
 
   return child;
+}
+
+function createPromptInterface() {
+  return readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+}
+
+async function waitForEnter(message) {
+  const rl = createPromptInterface();
+
+  try {
+    await new Promise((resolve) => {
+      rl.question(message, () => resolve());
+    });
+  } finally {
+    rl.close();
+  }
 }
 
 async function setupMockRoutes(page, data, user) {
@@ -822,16 +854,60 @@ async function authenticate(page, baseUrl, user) {
   );
 }
 
-async function captureShot(browser, baseUrl, data, shot, screenshotDir) {
-  const user = shot.role === "admin" ? USERS.admin : USERS.staff;
-  const context = await browser.newContext({
+function getUserForRole(role) {
+  return role === "admin" ? USERS.admin : USERS.staff;
+}
+
+function getStorageStatePath(args, role) {
+  if (role === "admin") {
+    return path.resolve(args["admin-state"] || DEFAULT_ADMIN_STATE);
+  }
+
+  return path.resolve(args["staff-state"] || DEFAULT_STAFF_STATE);
+}
+
+function resolveAuthMode(args) {
+  return args["auth-mode"] || "mock";
+}
+
+function resolveDataMode(args) {
+  return args["data-mode"] || "mock";
+}
+
+async function createCaptureContext(browser, args, role) {
+  const authMode = resolveAuthMode(args);
+
+  if (authMode === "state") {
+    const storageStatePath = getStorageStatePath(args, role);
+    if (!fileExists(storageStatePath)) {
+      throw new Error(`Missing storage state for ${role}: ${storageStatePath}`);
+    }
+
+    return browser.newContext({
+      viewport: { width: 1440, height: 1800 },
+      deviceScaleFactor: 1,
+      storageState: storageStatePath,
+    });
+  }
+
+  return browser.newContext({
     viewport: { width: 1440, height: 1800 },
     deviceScaleFactor: 1,
   });
+}
+
+async function captureShot(browser, args, baseUrl, data, shot, screenshotDir) {
+  const user = getUserForRole(shot.role);
+  const context = await createCaptureContext(browser, args, shot.role);
   const page = await context.newPage();
 
-  await setupMockRoutes(page, data, user);
-  await authenticate(page, baseUrl, user);
+  if (resolveDataMode(args) === "mock") {
+    await setupMockRoutes(page, data, user);
+  }
+
+  if (resolveAuthMode(args) === "mock") {
+    await authenticate(page, baseUrl, user);
+  }
 
   await page.goto(`${baseUrl}${shot.route}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(500);
@@ -886,22 +962,9 @@ function runCommand(command, commandArgs, options = {}) {
   });
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  const outputDir = path.resolve(args["output-dir"] || DEFAULT_OUTPUT_DIR);
-  const manifestPath = path.resolve(args.manifest || DEFAULT_MANIFEST);
-  const screenshotDir = path.resolve(args["screenshot-dir"] || DEFAULT_SCREENSHOT_DIR);
-  const docxPath = path.resolve(args["output-docx"] || DEFAULT_DOCX);
-  const port = args.port || DEFAULT_PORT;
-  const baseUrl = args["base-url"] || process.env.CAPTURE_BASE_URL || `http://localhost:${port}`;
-  const startServer = args["start-server"] !== "false";
-  const data = buildData();
-  const sections = buildSections();
-
-  ensureDir(outputDir);
-  ensureDir(screenshotDir);
-
+async function ensureServerReady(startServer, baseUrl, port) {
   let devServer;
+
   if (startServer) {
     try {
       await waitForUrlReady(baseUrl, 1500);
@@ -911,33 +974,126 @@ async function main() {
     }
   }
 
+  return devServer;
+}
+
+async function runLoginPhase(args, baseUrl) {
+  const role = args.role;
+  if (role !== "admin" && role !== "staff") {
+    throw new Error(`--phase login requires --role admin|staff`);
+  }
+
+  const storageStatePath = getStorageStatePath(args, role);
+  ensureDir(path.dirname(storageStatePath));
+
+  const browser = await chromium.launch({ headless: false });
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 1024 },
+  });
+  const page = await context.newPage();
+
+  process.stdout.write(
+    `\nLogin phase for ${role}.\nOpen browser launched at ${baseUrl}.\nComplete login manually, then return here.\n`
+  );
+
   try {
-    const browser = await chromium.launch({ headless: true });
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+    await waitForEnter("Press Enter after login is complete and the app is ready...");
+    await context.storageState({ path: storageStatePath });
+    process.stdout.write(`Saved ${role} storage state to ${storageStatePath}\n`);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
+async function runScreenshotsPhase(args, baseUrl, data, sections, screenshotDir, manifestPath) {
+  const browser = await chromium.launch({ headless: true });
+
+  try {
     const captured = {};
 
     for (const section of sections) {
       for (const shot of section.shots) {
-        const imagePath = await captureShot(browser, baseUrl, data, shot, screenshotDir);
+        const imagePath = await captureShot(browser, args, baseUrl, data, shot, screenshotDir);
         captured[shot.name] = imagePath;
       }
     }
 
-    await browser.close();
-
     const manifest = buildManifest(args, sections, captured);
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    process.stdout.write(`\nScreenshots captured and manifest saved to ${manifestPath}\n`);
+  } finally {
+    await browser.close();
+  }
+}
 
-    await runCommand(PYTHON_BIN, [
-      path.resolve(__dirname, "generate_transaction_docx.py"),
-      "--manifest",
-      manifestPath,
-      "--output",
-      docxPath,
-      "--group-members",
-      args["group-members"] || "",
-    ]);
+async function runDocxPhase(args, manifestPath, docxPath) {
+  if (!fileExists(manifestPath)) {
+    throw new Error(`Manifest not found: ${manifestPath}`);
+  }
 
-    process.stdout.write(`\nDOCX generated at ${docxPath}\n`);
+  await runCommand(PYTHON_BIN, [
+    path.resolve(__dirname, "generate_transaction_docx.py"),
+    "--manifest",
+    manifestPath,
+    "--output",
+    docxPath,
+    "--group-members",
+    args["group-members"] || "",
+  ]);
+
+  process.stdout.write(`\nDOCX generated at ${docxPath}\n`);
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const outputDir = path.resolve(args["output-dir"] || DEFAULT_OUTPUT_DIR);
+  const manifestPath = path.resolve(args.manifest || DEFAULT_MANIFEST);
+  const screenshotDir = path.resolve(args["screenshot-dir"] || DEFAULT_SCREENSHOT_DIR);
+  const docxPath = path.resolve(args["output-docx"] || DEFAULT_DOCX);
+  const phase = args.phase || "all";
+  const port = args.port || DEFAULT_PORT;
+  const baseUrl = args["base-url"] || process.env.CAPTURE_BASE_URL || `http://localhost:${port}`;
+  const startServer = args["start-server"] !== "false";
+  const authMode = resolveAuthMode(args);
+  const dataMode = resolveDataMode(args);
+  const data = buildData();
+  const sections = buildSections(args);
+
+  ensureDir(outputDir);
+  ensureDir(screenshotDir);
+  ensureDir(DEFAULT_AUTH_DIR);
+
+  const needsServer = phase === "all" || phase === "screenshots" || phase === "login";
+  const devServer = await ensureServerReady(needsServer && startServer, baseUrl, port);
+
+  try {
+    if (phase === "login") {
+      await runLoginPhase(args, baseUrl);
+      return;
+    }
+
+    if ((phase === "screenshots" || phase === "all") && dataMode === "live" && authMode !== "state") {
+      throw new Error(`Live data capture requires --auth-mode state so screenshots use a real logged-in browser session.`);
+    }
+
+    if (phase === "screenshots") {
+      await runScreenshotsPhase(args, baseUrl, data, sections, screenshotDir, manifestPath);
+      return;
+    }
+
+    if (phase === "docx") {
+      await runDocxPhase(args, manifestPath, docxPath);
+      return;
+    }
+
+    if (phase !== "all") {
+      throw new Error(`Unsupported phase: ${phase}`);
+    }
+
+    await runScreenshotsPhase(args, baseUrl, data, sections, screenshotDir, manifestPath);
+    await runDocxPhase(args, manifestPath, docxPath);
   } finally {
     if (devServer) {
       devServer.kill("SIGTERM");

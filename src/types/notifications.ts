@@ -7,6 +7,7 @@ export type NotificationType =
   | "message"
   | "rejection"
   | "post_accepted"
+  | "announcement"
   | "global_announcement"
   | "progress"
   | "delete"

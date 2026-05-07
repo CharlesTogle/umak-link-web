@@ -45,7 +45,7 @@ function getStatusChipClass(active: boolean, disabled = false): string {
 }
 
 function getItemStatusOptions(itemType: string | undefined): ApiItemStatus[] {
-  return itemType === "missing" ? ["claimed", "unclaimed", "discarded"] : ["returned", "lost"];
+  return itemType === "found" ? ["claimed", "unclaimed", "discarded"] : ["returned", "lost"];
 }
 
 function isItemStatusAllowed(itemStatus: ApiItemStatus, selectedPostStatus: ApiPostStatus | null): boolean {

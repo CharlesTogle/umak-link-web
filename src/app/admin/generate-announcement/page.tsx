@@ -110,7 +110,6 @@ export default function AdminGenerateAnnouncementPage() {
 
       // Create announcement
       await createAnnouncement({
-        user_id: user.user_id,
         message: title.trim(),
         description: description.trim(),
         image_url: imageUrl,

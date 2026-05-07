@@ -18,15 +18,8 @@ export async function listFraudReports(params: {
   return data;
 }
 
-export async function updateFraudReportStatus(
-  reportId: string,
-  status: string,
-  processedByStaffId?: string
-) {
-  const { data } = await api.put<{ success: boolean }>(`/fraud-reports/${reportId}/status`, {
-    status,
-    processed_by_staff_id: processedByStaffId,
-  });
+export async function updateFraudReportStatus(reportId: string, status: string) {
+  const { data } = await api.put<{ success: boolean }>(`/fraud-reports/${reportId}/status`, { status });
   return data;
 }
 

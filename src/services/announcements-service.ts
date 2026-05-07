@@ -14,7 +14,6 @@ export interface AnnouncementsResponse {
 }
 
 export interface CreateAnnouncementRequest {
-  user_id: string;
   message: string;
   description?: string | null;
   image_url?: string | null;

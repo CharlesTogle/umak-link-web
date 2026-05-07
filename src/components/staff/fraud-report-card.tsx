@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { CheckCircle2, Eye, XCircle } from "lucide-react";
+import { Eye } from "lucide-react";
 import type { MouseEvent } from "react";
 import { PostTagChip } from "@/components/staff/post-tag-chip";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
@@ -101,33 +101,6 @@ export function FraudReportCard({
         >
           <Eye className="size-4" /> View details
         </button>
-        {report.reportStatus !== "Open" ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100"
-            onClick={handleActionClick("open")}
-          >
-            <Eye className="size-4" /> Mark open
-          </button>
-        ) : null}
-        {report.reportStatus !== "Resolved" ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100"
-            onClick={handleActionClick("resolve")}
-          >
-            <CheckCircle2 className="size-4" /> Resolve
-          </button>
-        ) : null}
-        {report.reportStatus !== "Rejected" ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100"
-            onClick={handleActionClick("reject")}
-          >
-            <XCircle className="size-4" /> Reject
-          </button>
-        ) : null}
       </div>
     </article>
   );

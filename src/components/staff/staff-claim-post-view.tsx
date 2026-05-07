@@ -139,6 +139,12 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
       return;
     }
 
+    const claimedAt = formData.claimedAt ? new Date(formData.claimedAt) : null;
+    if (!claimedAt || Number.isNaN(claimedAt.getTime())) {
+      showToast("Please enter a valid claimed date and time", "danger");
+      return;
+    }
+
     try {
       await claimMutation.mutateAsync({
         found_post_id: Number(postId),
@@ -147,6 +153,7 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
           claimer_name: ui.selectedUser.user_name,
           claimer_school_email: ui.selectedUser.email,
           claimer_contact_num: formatPhoneNumber(normalized),
+          claimed_at: claimedAt.toISOString(),
           poster_name: post.is_anonymous ? "Anonymous" : post.poster_name ?? "Unknown User",
           staff_id: currentUser.user_id,
           staff_name: currentUser.user_name ?? "Staff User",
@@ -172,6 +179,7 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
   const isFormValid =
     ui.selectedUser !== null &&
     formData.contactNumber.trim() !== "" &&
+    formData.claimedAt.trim() !== "" &&
     normalizePhoneNumber(formData.contactNumber) !== null &&
     (!formData.lostItemId.trim() || lostItemPost !== null);
 

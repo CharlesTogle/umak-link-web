@@ -47,7 +47,7 @@ export async function fetchAuditLogsByAction(
 }
 
 export interface InsertAuditLogParams {
-  user_id: string;
+  user_id?: string;
   action: string;
   table_name: string;
   record_id: string;

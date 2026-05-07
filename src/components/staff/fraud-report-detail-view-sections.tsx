@@ -39,16 +39,22 @@ export function FraudReportMainPanel(props: {
   reason: string;
   details: string;
   linkedMissingItem: ApiPostRecordDetails | null;
-  canMarkOpen: boolean;
-  canRejectOrAccept: boolean;
+  canOpenReport: boolean;
+  canRejectReport: boolean;
+  canCloseReport: boolean;
+  canDeleteReport: boolean;
+  closeReportConfirmed: boolean;
   isProcessing: boolean;
   onViewPostRecord: () => void;
   onViewLinkedItem: () => void;
   onOpen: () => void;
   onReject: () => void;
-  onAccept: () => void;
+  onToggleCloseConfirmed: (checked: boolean) => void;
+  onClose: () => void;
+  onDelete: () => void;
 }) {
   const { report, linkedMissingItem } = props;
+
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-8 lg:col-start-1">
       <div className="mb-3 flex items-center gap-3">
@@ -132,21 +138,51 @@ export function FraudReportMainPanel(props: {
 
       <p className="mt-4 text-xs text-slate-500"><span className="font-medium text-slate-700">Date reported:</span> {formatDateTimeInPhilippineTime(report.date_reported ?? report.created_at, "Unknown")}</p>
 
-      {props.canMarkOpen ? (
-        <div className="mt-5">
-          <button type="button" disabled={props.isProcessing} onClick={props.onOpen} className="w-full rounded-full bg-[#1D2981] px-4 py-2 text-sm font-medium text-white hover:bg-[#16206a] disabled:opacity-60">
-            {props.isProcessing ? "Processing..." : "Mark Open"}
+      {(props.canOpenReport || props.canRejectReport) ? (
+        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+          {props.canRejectReport ? (
+            <button type="button" disabled={props.isProcessing} onClick={props.onReject} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60">
+              {props.isProcessing ? "Processing..." : "Reject"}
+            </button>
+          ) : null}
+          {props.canOpenReport ? (
+            <button type="button" disabled={props.isProcessing} onClick={props.onOpen} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
+              {props.isProcessing ? "Processing..." : "Open"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {props.canCloseReport ? (
+        <div className="mt-6 border-t border-slate-200 pt-4">
+          <p className="text-sm font-semibold text-[#1D2981]">Close Report</p>
+          <div className="mt-3 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <input
+              id="close-report-confirmation"
+              type="checkbox"
+              checked={props.closeReportConfirmed}
+              onChange={(event) => props.onToggleCloseConfirmed(event.target.checked)}
+              className="mt-1 size-4 accent-[#1D2981]"
+            />
+            <label htmlFor="close-report-confirmation" className="text-sm text-slate-700">
+              I confirm that this case has been properly taken care of.
+            </label>
+          </div>
+          <button
+            type="button"
+            disabled={!props.closeReportConfirmed || props.isProcessing}
+            onClick={props.onClose}
+            className="mt-3 w-full rounded-full bg-[#1D2981] px-4 py-2 text-sm font-medium text-white hover:bg-[#16206a] disabled:opacity-60"
+          >
+            {props.isProcessing ? "Processing..." : "Close Report"}
           </button>
         </div>
       ) : null}
 
-      {props.canRejectOrAccept ? (
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <button type="button" disabled={props.isProcessing} onClick={props.onReject} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60">
-            {props.isProcessing ? "Processing..." : "Reject"}
-          </button>
-          <button type="button" disabled={props.isProcessing} onClick={props.onAccept} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
-            {props.isProcessing ? "Processing..." : "Accept"}
+      {props.canDeleteReport ? (
+        <div className="mt-5">
+          <button type="button" disabled={props.isProcessing} onClick={props.onDelete} className="w-full rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60">
+            {props.isProcessing ? "Deleting..." : "Delete Report"}
           </button>
         </div>
       ) : null}
@@ -197,6 +233,7 @@ export function FraudReportModals(props: {
   showAcceptModal: boolean;
   showRejectModal: boolean;
   showCloseChoiceModal: boolean;
+  showDeleteModal: boolean;
   isProcessing: boolean;
   rejectReasons: readonly string[];
   closeReportChoices: CloseChoice[];
@@ -206,18 +243,20 @@ export function FraudReportModals(props: {
   onReject: (reason: string) => void;
   onCancelCloseChoice: () => void;
   onConfirmCloseChoice: (deleteClaim: boolean) => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
 }) {
   return (
     <>
       {props.showAcceptModal ? (
         <Overlay>
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-lg">
-            <h2 className="text-lg font-semibold text-slate-900">Mark report as open?</h2>
-            <p className="mt-2 text-sm text-slate-600">Once opened by you, other staff cannot open this report. Continue?</p>
+            <h2 className="text-lg font-semibold text-slate-900">Open report?</h2>
+            <p className="mt-2 text-sm text-slate-600">Once opened by you, other staff cannot open this report. An email will also be sent to the claimer.</p>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button type="button" onClick={props.onCancelAccept} className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
               <button type="button" disabled={props.isProcessing} onClick={props.onConfirmAccept} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
-                {props.isProcessing ? "Opening..." : "Mark Open"}
+                {props.isProcessing ? "Opening..." : "Open"}
               </button>
             </div>
           </div>
@@ -246,8 +285,8 @@ export function FraudReportModals(props: {
       {props.showCloseChoiceModal ? (
         <Overlay>
           <div className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-lg">
-            <h2 className="text-lg font-semibold text-slate-900">Accept Report - Claim Action</h2>
-            <p className="mt-2 text-sm text-slate-600">Choose what to do with the claim record.</p>
+            <h2 className="text-lg font-semibold text-slate-900">Close Report - Claim Action</h2>
+            <p className="mt-2 text-sm text-slate-600">Choose what to do with the claim record before closing this report.</p>
             <div className="mt-4 space-y-2">
               {props.closeReportChoices.map((choice) => (
                 <button key={choice.label} type="button" disabled={props.isProcessing} onClick={() => props.onConfirmCloseChoice(choice.deleteClaim)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60">
@@ -258,6 +297,21 @@ export function FraudReportModals(props: {
             </div>
             <div className="mt-4 flex justify-end">
               <button type="button" onClick={props.onCancelCloseChoice} className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+            </div>
+          </div>
+        </Overlay>
+      ) : null}
+
+      {props.showDeleteModal ? (
+        <Overlay>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-lg">
+            <h2 className="text-lg font-semibold text-slate-900">Delete rejected report?</h2>
+            <p className="mt-2 text-sm text-slate-600">This permanently removes the rejected fraud report record.</p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button type="button" onClick={props.onCancelDelete} className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button type="button" disabled={props.isProcessing} onClick={props.onConfirmDelete} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60">
+                {props.isProcessing ? "Deleting..." : "Delete"}
+              </button>
             </div>
           </div>
         </Overlay>

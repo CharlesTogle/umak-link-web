@@ -1,10 +1,5 @@
 import type { Meridian } from "@/lib/date-time-helpers";
-
-export interface LocationDetails {
-  level1: string;
-  level2: string;
-  level3: string;
-}
+import type { LocationDetails } from "@/types/create-post";
 
 export interface ToastState {
   tone: "success" | "danger";

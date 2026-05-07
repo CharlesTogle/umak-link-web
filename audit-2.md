@@ -38,10 +38,24 @@ Status summary:
 | P3-3 Raw API Exception Messages Exposed to Client | Completed | Staff claim submission now logs safely and always shows a generic failure toast. |
 | P3-4 Auth Hydration Flash | Completed | Staff create-post uses `useCurrentUser()` loading state so the initial idle-to-loading transition no longer flashes the form. |
 
+### Session Accomplishments
+
+- Replaced the audited staff server-state stores with TanStack Query infrastructure by adding a shared `QueryProvider` and query hooks under `src/hooks/queries/`.
+- Refactored the audited staff pages (`create-post`, dashboard, fraud reports, claim flow, search, post-record detail) into smaller section/state/controller modules so the components now meet the size and state-management standards.
+- Removed dead audited files and obsolete Zustand stores, including `usePortalStore.ts`, `staff-top-nav.tsx`, and the old staff dashboard/post-records/fraud-report/search stores.
+- Extracted shared building blocks required by the audit, including `ProfileView`, `Overlay`, `format-utils`, `compact-post` types, centralized UI types, and safe error logging helpers.
+- Closed the remaining Pass 3 items by scoping dashboard pending state per card, replacing raw error-object logging with safe string logging, preventing raw backend claim errors from reaching user toasts, and using the correct auth hydration loading path in staff create-post.
+
 Notes:
 
 - This update supersedes the 2026-05-06 summary below.
 - The 2026-05-06 report is preserved for history.
+- Session commits relevant to this audit update:
+  - `2fc14b7` `refactor(web): align portal screens with audit findings`
+- Verification completed during this session:
+  - `pnpm build` passed for `umak-link-web`.
+  - A targeted ESLint run on the files touched by the audit fixes returned `0` errors.
+  - Repo-wide `pnpm lint` still reports unrelated pre-existing issues outside the audit fix set, especially in `e2e/` and generated Playwright artifacts.
 
 ---
 

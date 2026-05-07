@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
+import { POST_REJECTION_REASONS } from "@/config/constants";
 import {
-  filterDashboardPosts,
   flattenInfinitePages,
   postKeys,
   useDashboardPosts,
@@ -17,10 +17,13 @@ import {
   DashboardFeed,
   DashboardRejectModal,
   DashboardSidebar,
-  type DashboardToast,
 } from "@/components/staff/staff-dashboard-view-sections";
 import type { CustomToastTone } from "@/components/ui/custom-toast";
 import type { CompactPost } from "@/types/compact-post";
+import {
+  initialStaffDashboardUiState,
+  staffDashboardUiReducer,
+} from "@/components/staff/staff-dashboard-view-state";
 
 export function StaffDashboardView() {
   const searchParams = useSearchParams();
@@ -45,29 +48,18 @@ export function StaffDashboardView() {
   });
   const dashboardStatsQuery = useDashboardStats();
   const posts = flattenInfinitePages(dashboardPostsQuery.data?.pages);
-
-  const [toasts, setToasts] = useState<DashboardToast[]>([]);
-  const [pendingRejectPost, setPendingRejectPost] = useState<CompactPost | null>(null);
-  const [selectedRejectReason, setSelectedRejectReason] = useState("");
-  const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
-  const [pendingDecisionPostId, setPendingDecisionPostId] = useState<string | null>(null);
-  const [pendingDecisionType, setPendingDecisionType] = useState<"accept" | "reject" | "notify" | null>(null);
-
-  const rejectReasons = [
-    "Item is not identified in storage.",
-    "Details don't match the item in question.",
-    "This is a spam or malicious post.",
-    "There is more than 1 instance of this post.",
-    "Item has been discarded.",
-  ];
+  const [ui, dispatchUi] = useReducer(
+    staffDashboardUiReducer,
+    initialStaffDashboardUiState
+  );
 
   const pushToast = (message: string, tone: CustomToastTone) => {
     toastIdRef.current += 1;
     const id = `dashboard-toast-${toastIdRef.current}`;
-    setToasts((previous) => [...previous, { id, message, tone }]);
+    dispatchUi({ type: "add_toast", value: { id, message, tone } });
 
     const timer = window.setTimeout(() => {
-      setToasts((previous) => previous.filter((toast) => toast.id !== id));
+      dispatchUi({ type: "remove_toast", id });
       toastTimersRef.current.delete(id);
     }, 3000);
 
@@ -88,7 +80,16 @@ export function StaffDashboardView() {
 
   const filteredPosts = useMemo(() => {
     const visiblePosts = posts.filter((post) => !dismissedPostIds.includes(post.postId));
-    return filterDashboardPosts(visiblePosts, selectedType, itemTypeForFetch);
+
+    if (selectedType === "all") {
+      return visiblePosts;
+    }
+
+    return visiblePosts.filter((post) =>
+      itemTypeForFetch === "missing"
+        ? post.itemType === "lost"
+        : post.itemType === "found"
+    );
   }, [dismissedPostIds, itemTypeForFetch, posts, selectedType]);
 
   const handleRefresh = async () => {
@@ -110,15 +111,17 @@ export function StaffDashboardView() {
     decision: "accepted" | "rejected",
     rejectionReason?: string
   ) => {
-    if (isSubmittingDecision) return;
+    if (ui.isSubmittingDecision) return;
     if (!post.posterId) {
       pushToast("Owner is not available for notification", "danger");
       return;
     }
 
-    setIsSubmittingDecision(true);
-    setPendingDecisionPostId(post.postId);
-    setPendingDecisionType(decision === "accepted" ? "accept" : "reject");
+    dispatchUi({
+      type: "start_decision",
+      postId: post.postId,
+      decisionType: decision === "accepted" ? "accept" : "reject",
+    });
 
     try {
       await updatePostStatus(post.postId, {
@@ -161,9 +164,7 @@ export function StaffDashboardView() {
     } catch {
       pushToast(decision === "accepted" ? "Failed to accept post" : "Failed to reject post", "danger");
     } finally {
-      setIsSubmittingDecision(false);
-      setPendingDecisionPostId(null);
-      setPendingDecisionType(null);
+      dispatchUi({ type: "finish_decision" });
     }
   };
 
@@ -177,33 +178,37 @@ export function StaffDashboardView() {
   };
 
   const handleReject = (post: CompactPost) => {
-    setPendingRejectPost(post);
-    setSelectedRejectReason("");
+    dispatchUi({ type: "open_reject_modal", post });
   };
 
   const handleRejectConfirm = () => {
-    if (!pendingRejectPost) return;
-    if (!selectedRejectReason) {
+    if (!ui.pendingRejectPost) return;
+    if (!ui.selectedRejectReason) {
       pushToast("Please select a rejection reason", "danger");
       return;
     }
 
-    void handlePostDecision(pendingRejectPost, "rejected", selectedRejectReason).finally(() => {
-      setPendingRejectPost(null);
-      setSelectedRejectReason("");
+    void handlePostDecision(
+      ui.pendingRejectPost,
+      "rejected",
+      ui.selectedRejectReason
+    ).finally(() => {
+      dispatchUi({ type: "close_reject_modal" });
     });
   };
 
   const handleMatchMissingPost = async (post: CompactPost) => {
-    if (isSubmittingDecision) return;
+    if (ui.isSubmittingDecision) return;
     if (!post.posterId) {
       pushToast("Owner is not available for notification", "danger");
       return;
     }
 
-    setIsSubmittingDecision(true);
-    setPendingDecisionPostId(post.postId);
-    setPendingDecisionType("accept");
+    dispatchUi({
+      type: "start_decision",
+      postId: post.postId,
+      decisionType: "accept",
+    });
 
     try {
       await updatePostStatus(post.postId, { status: "accepted" });
@@ -222,14 +227,12 @@ export function StaffDashboardView() {
     } catch {
       pushToast("Failed to match missing item", "danger");
     } finally {
-      setIsSubmittingDecision(false);
-      setPendingDecisionPostId(null);
-      setPendingDecisionType(null);
+      dispatchUi({ type: "finish_decision" });
     }
   };
 
   const handleNotifySimilar = async (post: CompactPost) => {
-    if (isSubmittingDecision) return;
+    if (ui.isSubmittingDecision) return;
     if (!post.posterId) {
       pushToast("Owner is not available for notification", "danger");
       return;
@@ -245,9 +248,11 @@ export function StaffDashboardView() {
       return;
     }
 
-    setIsSubmittingDecision(true);
-    setPendingDecisionPostId(post.postId);
-    setPendingDecisionType("notify");
+    dispatchUi({
+      type: "start_decision",
+      postId: post.postId,
+      decisionType: "notify",
+    });
 
     try {
       await sendNotification({
@@ -264,9 +269,7 @@ export function StaffDashboardView() {
     } catch {
       pushToast("Failed to notify owner", "danger");
     } finally {
-      setIsSubmittingDecision(false);
-      setPendingDecisionPostId(null);
-      setPendingDecisionType(null);
+      dispatchUi({ type: "finish_decision" });
     }
   };
 
@@ -316,7 +319,7 @@ export function StaffDashboardView() {
         selectedType={selectedType}
         isRefreshing={isRefreshing}
         onRefresh={() => void handleRefresh()}
-        toasts={toasts}
+        toasts={ui.toasts}
         errorMessage={errorMessage}
         isInitialLoading={isInitialLoading}
         filteredPosts={filteredPosts}
@@ -325,21 +328,20 @@ export function StaffDashboardView() {
         onReject={handleReject}
         onNotifySimilar={(post) => void handleNotifySimilar(post)}
         onShare={(post) => void handleShare(post)}
-        pendingDecisionPostId={pendingDecisionPostId}
-        isSubmittingDecision={isSubmittingDecision}
-        pendingDecisionType={pendingDecisionType}
+        pendingDecisionPostId={ui.pendingDecisionPostId}
+        isSubmittingDecision={ui.isSubmittingDecision}
+        pendingDecisionType={ui.pendingDecisionType}
       />
       <DashboardSidebar stats={stats} selectedType={selectedType} onNavigate={(path) => router.push(path)} />
       <DashboardRejectModal
-        isOpen={Boolean(pendingRejectPost)}
-        rejectReasons={rejectReasons}
-        selectedRejectReason={selectedRejectReason}
-        isSubmittingDecision={isSubmittingDecision}
-        onSelectReason={setSelectedRejectReason}
+        isOpen={Boolean(ui.pendingRejectPost)}
+        rejectReasons={POST_REJECTION_REASONS}
+        selectedRejectReason={ui.selectedRejectReason}
+        isSubmittingDecision={ui.isSubmittingDecision}
+        onSelectReason={(reason) => dispatchUi({ type: "set_reject_reason", value: reason })}
         onCancel={() => {
-          if (isSubmittingDecision) return;
-          setPendingRejectPost(null);
-          setSelectedRejectReason("");
+          if (ui.isSubmittingDecision) return;
+          dispatchUi({ type: "close_reject_modal" });
         }}
         onConfirm={handleRejectConfirm}
       />

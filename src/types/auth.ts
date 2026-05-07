@@ -1,4 +1,5 @@
 export type PortalUserType = "User" | "Staff" | "Admin";
+export type AuthStatus = "idle" | "loading" | "ready" | "error";
 
 export interface AuthUser {
   user_id: string;

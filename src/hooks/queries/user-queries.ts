@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { searchUsers } from "@/services/auth-service";
+import { searchUsers } from "@/services/users-service";
 
 export const userKeys = {
   search: (query: string) => ["users", "search", query] as const,

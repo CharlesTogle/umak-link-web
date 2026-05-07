@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import { PhotoProvider } from "react-photo-view";
+import { POST_REJECTION_REASONS } from "@/config/constants";
 import { useLinkedPost, usePostDetail } from "@/hooks/queries/post-queries";
 import { normalizeValue, toDisplayLabel } from "@/lib/format-utils";
 import { shareLink } from "@/lib/share-link";
@@ -22,13 +23,6 @@ import type { ApiItemStatus, ApiPostStatus } from "@/types/post-record-api";
 import type { LinkedPostRecord, ToastTone } from "@/types/ui";
 
 const POST_STATUS_OPTIONS: ApiPostStatus[] = ["pending", "accepted", "rejected"];
-const REJECT_REASONS = [
-  "Item is not identified in storage.",
-  "Details don't match the item in question.",
-  "This is a spam or malicious post.",
-  "There is more than 1 instance of this post.",
-  "Item has been discarded.",
-] as const;
 
 function getStatusColor(status: string): string {
   const normalized = normalizeValue(status);
@@ -209,27 +203,11 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
     if (postQuery.error) setToast("Failed to load post record", "danger");
   }, [postQuery.error, setToast]);
 
-  useEffect(() => {
-    if (!record) return;
-    dispatchUi({
-      type: "reset_selection",
-      postStatus: normalizeValue(record.post_status) as ApiPostStatus,
-      itemStatus: normalizeValue(record.item_status) as ApiItemStatus,
-    });
-  }, [record]);
-
-  const resetStatusSelection = useCallback(() => {
-    if (!record) return;
-    dispatchUi({
-      type: "reset_selection",
-      postStatus: normalizeValue(record.post_status) as ApiPostStatus,
-      itemStatus: normalizeValue(record.item_status) as ApiItemStatus,
-    });
-  }, [record]);
-
   const canNotifyOwner = record && normalizeValue(record.item_type) === "missing" && normalizedItemStatus === "lost";
   const canClaimItem =
     record && normalizeValue(record.item_type) === "found" && normalizedItemStatus === "unclaimed" && normalizedPostStatus === "accepted";
+  const selectedStatus = ui.selectedStatus ?? normalizedPostStatus;
+  const selectedItemStatus = ui.selectedItemStatus ?? normalizedItemStatus;
 
   const performStatusChange = useCallback(async () => {
     if (!record || ui.isSubmitting) return;
@@ -264,14 +242,14 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       await linkedPostQuery.refetch();
       setToast("Status changed successfully.", "success");
       dispatchUi({ type: "set_modal", modal: "showStatusModal", value: false });
+      dispatchUi({ type: "clear_selection" });
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Failed to update status", "danger");
-      resetStatusSelection();
     } finally {
       dispatchUi({ type: "set_submitting", value: false });
       dispatchUi({ type: "set_modal", modal: "showUnclaimModal", value: false });
     }
-  }, [linkedPostQuery, normalizedItemStatus, normalizedPostStatus, postQuery, record, resetStatusSelection, setToast, ui.isSubmitting, ui.selectedItemStatus, ui.selectedStatus]);
+  }, [linkedPostQuery, normalizedItemStatus, normalizedPostStatus, postQuery, record, setToast, ui.isSubmitting, ui.selectedItemStatus, ui.selectedStatus]);
 
   const handleApplyStatusChange = async () => {
     if (!record) return;
@@ -321,6 +299,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       await postQuery.refetch();
       await linkedPostQuery.refetch();
       setToast("Status changed successfully.", "success");
+      dispatchUi({ type: "clear_selection" });
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Failed to reject post", "danger");
     } finally {
@@ -410,30 +389,40 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
           showUnclaimModal={ui.showUnclaimModal}
           showNotifyModal={ui.showNotifyModal}
           isSubmitting={ui.isSubmitting}
-          selectedStatus={ui.selectedStatus}
-          selectedItemStatus={ui.selectedItemStatus}
+          selectedStatus={selectedStatus}
+          selectedItemStatus={selectedItemStatus}
           postItemType={record.item_type}
           postStatusOptions={POST_STATUS_OPTIONS}
-          rejectReasons={REJECT_REASONS}
+          rejectReasons={POST_REJECTION_REASONS}
           getStatusChipClass={getStatusChipClass}
           isPostStatusAllowed={isPostStatusAllowed}
           isItemStatusAllowed={isItemStatusAllowed}
           getItemStatusOptions={getItemStatusOptions}
-          onSelectStatus={(value) => dispatchUi({ type: "set_selected_status", value })}
-          onSelectItemStatus={(value) => dispatchUi({ type: "set_selected_item_status", value })}
+          onSelectStatus={(value) =>
+            dispatchUi({
+              type: "set_selected_status",
+              value: value === normalizedPostStatus ? null : value,
+            })
+          }
+          onSelectItemStatus={(value) =>
+            dispatchUi({
+              type: "set_selected_item_status",
+              value: value === normalizedItemStatus ? null : value,
+            })
+          }
           onCancelStatus={() => {
             dispatchUi({ type: "set_modal", modal: "showStatusModal", value: false });
-            resetStatusSelection();
+            dispatchUi({ type: "clear_selection" });
           }}
           onApplyStatusChange={() => void handleApplyStatusChange()}
           onReject={(reason) => void handleRejectWithReason(reason)}
           onCancelReject={() => {
             dispatchUi({ type: "set_modal", modal: "showRejectModal", value: false });
-            resetStatusSelection();
+            dispatchUi({ type: "clear_selection" });
           }}
           onCancelUnclaim={() => {
             dispatchUi({ type: "set_modal", modal: "showUnclaimModal", value: false });
-            resetStatusSelection();
+            dispatchUi({ type: "clear_selection" });
           }}
           onConfirmUnclaim={() => void performStatusChange()}
           onCancelNotify={() => dispatchUi({ type: "set_modal", modal: "showNotifyModal", value: false })}

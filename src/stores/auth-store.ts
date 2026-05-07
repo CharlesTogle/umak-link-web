@@ -1,10 +1,8 @@
 import { create } from "zustand";
 import { clearStoredToken } from "@/lib/token-storage";
 import { supabase } from "@/lib/supabase";
-import type { AuthUser } from "@/types/auth";
+import type { AuthStatus, AuthUser } from "@/types/auth";
 import { fetchCurrentUser, getAuthErrorMessage, isUnauthorizedError } from "@/services/auth-service";
-
-type AuthStatus = "idle" | "loading" | "ready" | "error";
 
 interface AuthStore {
   user: AuthUser | null;

@@ -5,13 +5,6 @@ export interface SelectedUser {
   profile_picture_url?: string | null;
 }
 
-export interface UserSearchResult {
-  out_user_id: string;
-  out_user_name: string;
-  out_email: string;
-  out_profile_picture_url?: string | null;
-}
-
 export interface ClaimFormData {
   contactNumber: string;
   lostItemId: string;

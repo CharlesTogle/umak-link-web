@@ -4,12 +4,7 @@ import Image from "next/image";
 import { Info, Loader2, Upload, X } from "lucide-react";
 import { POST_CATEGORIES } from "@/lib/post-categories";
 import type { Meridian } from "@/lib/date-time-helpers";
-
-interface LocationDetails {
-  level1: string;
-  level2: string;
-  level3: string;
-}
+import type { LocationDetails } from "@/types/create-post";
 
 export function CreatePostImageSection(props: {
   image: File | null;

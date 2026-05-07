@@ -22,8 +22,8 @@ import {
   formReducer,
   normalizePhoneNumber,
   uiReducer,
-  type UserSearchResult,
 } from "@/components/staff/staff-claim-post-view-state";
+import type { UserSearchResult } from "@/types/user-search";
 
 export function StaffClaimPostView({ postId }: { postId: string }) {
   const router = useRouter();
@@ -77,20 +77,14 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
     if (postQuery.error) showToast("Failed to load post", "danger");
   }, [postQuery.error, showToast]);
 
-  useEffect(() => {
-    if (postQuery.data && normalizeValue(postQuery.data.item_type) !== "found") {
-      showToast("Only found items can be claimed", "danger");
-    }
-  }, [postQuery.data, showToast]);
-
   const handleUserSelect = (user: UserSearchResult) => {
     dispatchUi({
       type: "set_selected_user",
       value: {
-        user_id: user.out_user_id,
-        user_name: user.out_user_name,
-        email: user.out_email,
-        profile_picture_url: user.out_profile_picture_url ?? null,
+        user_id: user.user_id,
+        user_name: user.user_name,
+        email: user.email,
+        profile_picture_url: user.profile_picture_url ?? null,
       },
     });
     dispatchUi({ type: "set_search_query", value: "" });

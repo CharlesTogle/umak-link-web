@@ -37,6 +37,19 @@ export interface SearchItemsStaffApiResponse {
   results: SearchMatchRow[];
 }
 
+export interface StaffSearchFilters {
+  lastSeenDate: string;
+  category: string;
+  locationLastSeen: string;
+  claimFromDate: string;
+  claimToDate: string;
+  itemStatuses: SearchItemStatus[];
+  postStatuses: SearchPostStatus[];
+  sort: "accepted_on_date" | "submission_date";
+  sortDirection: "asc" | "desc";
+  limit: number;
+}
+
 export type SearchItemStatus = "claimed" | "unclaimed" | "discarded" | "returned" | "lost";
 
 export type SearchPostStatus =

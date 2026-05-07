@@ -1,5 +1,5 @@
 import Image from "next/image";
-import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import GoogleLoginButton from "@/components/auth/google-login-button";
 import { HomeAuthRedirect } from "@/components/auth/home-auth-redirect";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

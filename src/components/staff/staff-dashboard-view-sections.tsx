@@ -2,16 +2,14 @@
 
 import { RefreshCcw } from "lucide-react";
 import { CompactPostCard } from "@/components/staff/compact-post-card";
+import type {
+  DashboardDecisionType,
+  DashboardToast,
+} from "@/components/staff/staff-dashboard-view-state";
 import { PostTagChip } from "@/components/staff/post-tag-chip";
 import { StaffStatCard } from "@/components/staff/staff-stat-card";
-import { CustomToastStack, type CustomToastTone } from "@/components/ui/custom-toast";
+import { CustomToastStack } from "@/components/ui/custom-toast";
 import type { CompactPost } from "@/types/compact-post";
-
-export interface DashboardToast {
-  id: string;
-  message: string;
-  tone: CustomToastTone;
-}
 
 interface DashboardFeedProps {
   feedRef: React.RefObject<HTMLDivElement | null>;
@@ -30,7 +28,7 @@ interface DashboardFeedProps {
   onShare: (post: CompactPost) => void;
   pendingDecisionPostId: string | null;
   isSubmittingDecision: boolean;
-  pendingDecisionType: "accept" | "reject" | "notify" | null;
+  pendingDecisionType: DashboardDecisionType | null;
 }
 
 export function DashboardFeed({

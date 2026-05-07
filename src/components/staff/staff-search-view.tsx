@@ -6,7 +6,6 @@ import { CustomToast } from "@/components/ui/custom-toast";
 import {
   initialStaffSearchFilters,
   useStaffSearchResults,
-  type StaffSearchFilters,
 } from "@/hooks/queries/staff-search-queries";
 import { shareLink } from "@/lib/share-link";
 import {
@@ -17,7 +16,7 @@ import {
 import { sendNotification } from "@/services/notifications-service";
 import { generateReverseImageQuery } from "@/services/search-service";
 import type { PostRecord, PostRecordAction } from "@/types/post-record";
-import type { SearchItemStatus, SearchPostStatus } from "@/types/search";
+import type { SearchItemStatus, SearchPostStatus, StaffSearchFilters } from "@/types/search";
 import {
   SearchControlsPanel,
   SearchResultsPanel,

@@ -18,7 +18,7 @@ export type PostRecordDetailUiAction =
   | { type: "set_modal"; modal: "showStatusModal" | "showRejectModal" | "showUnclaimModal" | "showNotifyModal"; value: boolean }
   | { type: "set_selected_status"; value: ApiPostStatus | null }
   | { type: "set_selected_item_status"; value: ApiItemStatus | null }
-  | { type: "reset_selection"; postStatus: ApiPostStatus; itemStatus: ApiItemStatus };
+  | { type: "clear_selection" };
 
 export function postRecordDetailUiReducer(
   state: PostRecordDetailUiState,
@@ -35,7 +35,7 @@ export function postRecordDetailUiReducer(
       return { ...state, selectedStatus: action.value };
     case "set_selected_item_status":
       return { ...state, selectedItemStatus: action.value };
-    case "reset_selection":
-      return { ...state, selectedStatus: action.postStatus, selectedItemStatus: action.itemStatus };
+    case "clear_selection":
+      return { ...state, selectedStatus: null, selectedItemStatus: null };
   }
 }

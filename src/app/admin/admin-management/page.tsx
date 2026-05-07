@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { CustomToast } from "@/components/ui/custom-toast";
 import { UserCircle2, Trash2, ShieldCheck, Users, Download, CheckSquare, Square, MoreVertical, Pencil, ChevronLeft, ChevronRight, Calendar, Clock, Search, Filter, ArrowUpDown } from "lucide-react";
 import type { PortalUserType } from "@/types/auth";
-import { fetchUsers, updateUserRole, searchUsers as searchUsersAPI } from "@/services/admin-service";
+import { fetchUsers, updateUserRole } from "@/services/admin-service";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { logError } from "@/lib/error-utils";
 import { formatRelativeTime } from "@/lib/time";
 import type { UserListItem } from "@/types/auth";
+import { searchUsers as searchUsersAPI } from "@/services/users-service";
 import Image from "next/image";
 
 interface UserCardProps {
@@ -427,7 +428,7 @@ export default function AdminManagementPage() {
             user_name: result.user_name,
             email: result.email,
             profile_picture_url: result.profile_picture_url,
-            user_type: result.user_type,
+            user_type: result.user_type ?? "User",
             created_at: "", // Not available from search
             last_login: null, // Not available from search
           }));

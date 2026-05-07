@@ -5,20 +5,7 @@ import { mapPostToRecord } from "@/lib/post-mappers";
 import { listPosts } from "@/services/posts-service";
 import { searchItemsStaff } from "@/services/search-service";
 import type { PostRecord } from "@/types/post-record";
-import type { SearchItemStatus, SearchMatchRow, SearchPostStatus } from "@/types/search";
-
-export interface StaffSearchFilters {
-  lastSeenDate: string;
-  category: string;
-  locationLastSeen: string;
-  claimFromDate: string;
-  claimToDate: string;
-  itemStatuses: SearchItemStatus[];
-  postStatuses: SearchPostStatus[];
-  sort: "accepted_on_date" | "submission_date";
-  sortDirection: "asc" | "desc";
-  limit: number;
-}
+import type { SearchMatchRow, SearchPostStatus, StaffSearchFilters } from "@/types/search";
 
 export const initialStaffSearchFilters: StaffSearchFilters = {
   lastSeenDate: "",

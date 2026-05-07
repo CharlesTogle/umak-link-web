@@ -4,26 +4,11 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { mapPostToCompact, mapPostToRecord } from "@/lib/post-mappers";
 import { countPosts, getPostByItemDetails, getPostByItemId, getPostFull, listPosts } from "@/services/posts-service";
 import { fetchUnreadNotificationsCount } from "@/services/notifications-service";
-import type { CompactPost } from "@/types/compact-post";
-import type { PostRecord } from "@/types/post-record";
 import type { ApiPostRecordDetails } from "@/types/post-record-api";
+import type { DashboardPostsParams, PostRecordsParams } from "@/types/post-query";
 import { normalizeValue } from "@/lib/format-utils";
 
 export const POSTS_PAGE_SIZE = 10;
-
-export interface DashboardPostsParams {
-  itemType?: "found" | "missing";
-  postStatus?: string | null;
-  pageSize?: number;
-}
-
-export interface PostRecordsParams {
-  itemType?: "found" | "missing";
-  postStatus?: string | null;
-  itemStatus?: string | null;
-  sortDirection?: "asc" | "desc";
-  pageSize?: number;
-}
 
 export const postKeys = {
   dashboard: (params: DashboardPostsParams) => ["posts", "dashboard", params] as const,
@@ -173,23 +158,4 @@ export function useLostItemLookup(itemId: string) {
       return lostPost;
     },
   });
-}
-
-export function filterDashboardPosts(
-  posts: CompactPost[],
-  selectedType: "lost" | "found" | "all",
-  itemTypeForFetch?: "missing" | "found"
-) {
-  if (selectedType === "all") {
-    return posts;
-  }
-
-  return posts.filter((post) => {
-    const byViewType = itemTypeForFetch === "missing" ? post.itemType === "lost" : post.itemType === "found";
-    return byViewType;
-  });
-}
-
-export function identityRecords(records: PostRecord[]) {
-  return records;
 }

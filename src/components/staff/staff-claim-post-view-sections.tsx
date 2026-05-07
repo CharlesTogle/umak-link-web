@@ -7,10 +7,10 @@ import { Overlay } from "@/components/ui/overlay";
 import type {
   ClaimFormData,
   SelectedUser,
-  UserSearchResult,
 } from "@/components/staff/staff-claim-post-view-state";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import type { ApiPostRecordDetails } from "@/types/post-record-api";
+import type { UserSearchResult } from "@/types/user-search";
 
 export function ClaimToolbar(props: {
   isFormValid: boolean;
@@ -163,17 +163,17 @@ export function ClaimSidebar(props: {
               {props.searchResults.length > 0 ? (
                 <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
                   {props.searchResults.map((user) => (
-                    <button key={user.out_user_id} type="button" onClick={() => props.onUserSelect(user)} className="flex w-full items-center gap-3 border-b border-slate-100 p-3 text-left hover:bg-slate-50 last:border-b-0">
+                    <button key={user.user_id} type="button" onClick={() => props.onUserSelect(user)} className="flex w-full items-center gap-3 border-b border-slate-100 p-3 text-left hover:bg-slate-50 last:border-b-0">
                       <div className="flex size-8 items-center justify-center overflow-hidden rounded-full bg-slate-200">
-                        {user.out_profile_picture_url ? (
-                          <Image src={user.out_profile_picture_url} alt={user.out_user_name} width={32} height={32} unoptimized className="size-full object-cover" />
+                        {user.profile_picture_url ? (
+                          <Image src={user.profile_picture_url} alt={user.user_name} width={32} height={32} unoptimized className="size-full object-cover" />
                         ) : (
                           <User className="size-4 text-slate-500" />
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-900">{user.out_user_name}</p>
-                        <p className="text-xs text-slate-500">{user.out_email}</p>
+                        <p className="text-sm font-medium text-slate-900">{user.user_name}</p>
+                        <p className="text-xs text-slate-500">{user.email}</p>
                       </div>
                     </button>
                   ))}

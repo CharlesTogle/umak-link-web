@@ -9,10 +9,8 @@ import {
   fetchDashboardStats,
   fetchWeeklyStats,
   fetchExportData,
-  type DashboardStats,
-  type WeeklyStatsData,
-  type DateRange,
 } from "@/services/admin-service";
+import type { DashboardStats, DateRange, WeeklyStatsData } from "@/types/admin";
 
 function DateRangeFilter({
   value,

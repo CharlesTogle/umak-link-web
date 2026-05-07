@@ -2,9 +2,8 @@
 
 import { AlertTriangle, Filter, Inbox, RefreshCcw, RotateCw, Search, WifiOff, X } from "lucide-react";
 import { PostRecordCard } from "@/components/staff/post-record-card";
-import type { StaffSearchFilters } from "@/hooks/queries/staff-search-queries";
 import type { PostRecord, PostRecordAction } from "@/types/post-record";
-import type { SearchItemStatus, SearchPostStatus } from "@/types/search";
+import type { SearchItemStatus, SearchPostStatus, StaffSearchFilters } from "@/types/search";
 
 export function chipClass(isActive: boolean): string {
   return isActive

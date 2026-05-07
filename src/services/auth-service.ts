@@ -28,25 +28,3 @@ export function getAuthErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) return error.message;
   return "Unable to load your account details.";
 }
-
-export async function searchUsers(query: string): Promise<
-  Array<{
-    out_user_id: string;
-    out_user_name: string;
-    out_email: string;
-    out_profile_picture_url?: string | null;
-  }>
-> {
-  const { data } = await api.get<{
-    results: Array<{
-      out_user_id: string;
-      out_user_name: string;
-      out_email: string;
-      out_profile_picture_url?: string | null;
-    }>;
-  }>("/users/search", {
-    params: { query },
-  });
-
-  return data.results;
-}

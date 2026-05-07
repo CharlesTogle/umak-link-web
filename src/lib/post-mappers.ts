@@ -1,5 +1,5 @@
-import type { CompactPost } from "@/components/staff/compact-post-card";
 import { parseTimestamp } from "@/lib/date-time-helpers";
+import type { CompactPost } from "@/types/compact-post";
 import type { PostRecord } from "@/types/post-record";
 import type { ApiPostRecord } from "@/types/post-record-api";
 

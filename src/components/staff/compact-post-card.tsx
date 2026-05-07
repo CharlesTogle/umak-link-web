@@ -6,36 +6,7 @@ import { useRouter } from "next/navigation";
 import { PostTagChip } from "@/components/staff/post-tag-chip";
 import { formatDateInPhilippineTime } from "@/lib/date-time-helpers";
 import { formatRelativeTime } from "@/lib/time";
-
-export interface CompactPost {
-  postId: string;
-  posterId: string | null;
-  itemId: string | null;
-  hoursAgo: number;
-  username: string;
-  isAnonymous: boolean;
-  posterProfileUrl?: string | null;
-  title: string;
-  imageUrl: string | null;
-  itemName: string;
-  itemDescription: string | null;
-  category: string | null;
-  itemType: "lost" | "found";
-  postStatus:
-    | "Pending"
-    | "Accepted"
-    | "Rejected"
-    | "Claimed"
-    | "Returned"
-    | "Reported"
-    | "Archived"
-    | "Fraud"
-    | "Deleted";
-  itemStatus: "Lost" | "Found" | "Unclaimed" | "Claimed" | "Returned";
-  lastSeenLocation: string | null;
-  lastSeenAt: string | null;
-  submissionDate: string | null;
-}
+import type { CompactPost } from "@/types/compact-post";
 
 function formatDate(value: string | null): string {
   return formatDateInPhilippineTime(value, "N/A");
@@ -171,7 +142,10 @@ export function CompactPostCard({
             </button>
           </>
         ) : null}
-        <button className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
+        >
           <Share2 className="size-4" /> Share
         </button>
       </div>

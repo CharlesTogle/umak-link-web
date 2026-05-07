@@ -63,7 +63,12 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
 
   const handleClick = () => {
     // Parse href from notification data if available
-    const href = notification.data?.url || notification.data?.href;
+    const href =
+      typeof notification.data?.url === "string"
+        ? notification.data.url
+        : typeof notification.data?.href === "string"
+          ? notification.data.href
+          : null;
 
     if (href) {
       // Mark as read before navigating

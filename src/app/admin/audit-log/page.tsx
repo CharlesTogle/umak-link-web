@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { logError } from "@/lib/error-utils";
 import { fetchAuditLogs, type AuditLog } from "@/services/audit-logs-service";
 import {
   formatActionType,
@@ -129,7 +130,7 @@ export default function AdminAuditLogPage() {
 
       setHasMore(logs.length === LOGS_LIMIT);
     } catch (error) {
-      console.error("Failed to fetch audit logs:", error);
+      logError("Failed to fetch audit logs:", error);
     } finally {
       setLoading(false);
       setLoadingMore(false);

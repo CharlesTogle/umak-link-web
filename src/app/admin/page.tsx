@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { logError } from "@/lib/error-utils";
 import {
   fetchDashboardStats,
   fetchWeeklyStats,
@@ -551,7 +552,7 @@ export default function AdminDashboardIndexPage() {
         const result = await fetchDashboardStats(statsDateRange);
         setStats(result);
       } catch (err) {
-        console.error("Error fetching dashboard stats:", err);
+        logError("Error fetching dashboard stats:", err);
       } finally {
         setLoading(false);
       }
@@ -567,7 +568,7 @@ export default function AdminDashboardIndexPage() {
         const result = await fetchDashboardStats(itemReportDateRange);
         setItemReportStats(result);
       } catch (err) {
-        console.error("Error fetching item report stats:", err);
+        logError("Error fetching item report stats:", err);
       } finally {
         setItemReportLoading(false);
       }
@@ -583,7 +584,7 @@ export default function AdminDashboardIndexPage() {
         const result = await fetchWeeklyStats();
         setWeeklyStats(result);
       } catch (err) {
-        console.error("Error fetching weekly stats:", err);
+        logError("Error fetching weekly stats:", err);
       } finally {
         setWeeklyLoading(false);
       }
@@ -639,8 +640,8 @@ export default function AdminDashboardIndexPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("Error generating CSV", e);
+    } catch (error) {
+      logError("Error generating CSV", error);
     }
   };
 
@@ -695,8 +696,8 @@ export default function AdminDashboardIndexPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("Error generating CSV", e);
+    } catch (error) {
+      logError("Error generating CSV", error);
     }
   };
 

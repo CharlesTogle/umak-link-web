@@ -9,6 +9,7 @@ import type { PortalUserType } from "@/types/auth";
 import { fetchUsers, updateUserRole, searchUsers as searchUsersAPI } from "@/services/admin-service";
 import { insertAuditLog } from "@/services/audit-logs-service";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { logError } from "@/lib/error-utils";
 import type { UserListItem } from "@/types/auth";
 import Image from "next/image";
 import { toPhilippineTime, getRelativeTime } from "@/lib/date-utils";
@@ -348,7 +349,7 @@ export default function AdminManagementPage() {
       setAdmins(sortedAdmins);
       setStaff(staffList);
     } catch (error) {
-      console.error("Failed to load users:", error);
+      logError("Failed to load users:", error);
       setToast({
         show: true,
         message: "Failed to load users. Please try again.",
@@ -373,7 +374,7 @@ export default function AdminManagementPage() {
 
       setUsers(paginatedUsers);
     } catch (error) {
-      console.error("Failed to load regular users:", error);
+      logError("Failed to load regular users:", error);
       setToast({
         show: true,
         message: "Failed to load users. Please try again.",
@@ -434,7 +435,7 @@ export default function AdminManagementPage() {
           setIsSearching(false);
         }
       } catch (error) {
-        console.error("Search failed:", error);
+        logError("Search failed:", error);
         setSearchResults([]);
         setIsSearching(false);
       }
@@ -496,7 +497,7 @@ export default function AdminManagementPage() {
         tone: "success",
       });
     } catch (error) {
-      console.error("Failed to remove user:", error);
+      logError("Failed to remove user:", error);
       setToast({
         show: true,
         message: "Failed to remove user. Please try again.",
@@ -570,7 +571,7 @@ export default function AdminManagementPage() {
         tone: "success",
       });
     } catch (error) {
-      console.error("Failed to update role:", error);
+      logError("Failed to update role:", error);
       setToast({
         show: true,
         message: "Failed to update role. Please try again.",
@@ -650,7 +651,7 @@ export default function AdminManagementPage() {
 
           successCount++;
         } catch (error) {
-          console.error(`Failed to remove ${user.user_name}:`, error);
+          logError(`Failed to remove ${user.user_name}:`, error);
           failedCount++;
         }
       }
@@ -680,7 +681,7 @@ export default function AdminManagementPage() {
         });
       }
     } catch (error) {
-      console.error("Batch remove error:", error);
+      logError("Batch remove error:", error);
       setToast({
         show: true,
         message: "An error occurred. Please try again.",

@@ -1,41 +1,34 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCcw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CompactPost, CompactPostCard } from "@/components/staff/compact-post-card";
-import { PostTagChip } from "@/components/staff/post-tag-chip";
-import { StaffStatCard } from "@/components/staff/staff-stat-card";
-import { CustomToastStack, type CustomToastTone } from "@/components/ui/custom-toast";
-import { useStaffDashboardStore } from "@/stores/staff-dashboard-store";
+import {
+  filterDashboardPosts,
+  flattenInfinitePages,
+  postKeys,
+  useDashboardPosts,
+  useDashboardStats,
+} from "@/hooks/queries/post-queries";
 import { updatePostStatus } from "@/services/posts-service";
 import { sendNotification } from "@/services/notifications-service";
-
-interface DashboardToast {
-  id: string;
-  message: string;
-  tone: CustomToastTone;
-}
+import {
+  DashboardFeed,
+  DashboardRejectModal,
+  DashboardSidebar,
+  type DashboardToast,
+} from "@/components/staff/staff-dashboard-view-sections";
+import type { CustomToastTone } from "@/components/ui/custom-toast";
+import type { CompactPost } from "@/types/compact-post";
 
 export function StaffDashboardView() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const feedRef = useRef<HTMLDivElement | null>(null);
   const toastIdRef = useRef(0);
   const toastTimersRef = useRef<Map<string, number>>(new Map());
-  const {
-    posts,
-    isLoading,
-    isRefreshing,
-    error,
-    hasMore,
-    fetchPosts,
-    loadMore,
-    refresh,
-    stats,
-    fetchStats,
-    removePost,
-  } = useStaffDashboardStore();
+  const [dismissedPostIds, setDismissedPostIds] = useState<string[]>([]);
 
   const typeFromUrl = searchParams.get("type");
   const selectedType = (typeFromUrl === "lost" || typeFromUrl === "found" || typeFromUrl === "all"
@@ -43,9 +36,17 @@ export function StaffDashboardView() {
     : "all") as "lost" | "found" | "all";
   const itemTypeForFetch = selectedType === "lost" ? "missing" : selectedType === "found" ? "found" : undefined;
 
+  const dashboardPostsQuery = useDashboardPosts({
+    ...(itemTypeForFetch ? { itemType: itemTypeForFetch } : {}),
+    postStatus: "pending",
+    pageSize: 10,
+  });
+  const dashboardStatsQuery = useDashboardStats();
+  const posts = flattenInfinitePages(dashboardPostsQuery.data?.pages);
+
   const [toasts, setToasts] = useState<DashboardToast[]>([]);
   const [pendingRejectPost, setPendingRejectPost] = useState<CompactPost | null>(null);
-  const [selectedRejectReason, setSelectedRejectReason] = useState<string>("");
+  const [selectedRejectReason, setSelectedRejectReason] = useState("");
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [pendingDecisionPostId, setPendingDecisionPostId] = useState<string | null>(null);
   const [pendingDecisionType, setPendingDecisionType] = useState<"accept" | "reject" | null>(null);
@@ -79,30 +80,18 @@ export function StaffDashboardView() {
     };
   }, []);
 
+  useEffect(() => {
+    setDismissedPostIds([]);
+  }, [itemTypeForFetch]);
+
   const filteredPosts = useMemo(() => {
-    if (selectedType === "all") {
-      return posts;
-    }
-    return posts.filter((post) => {
-      const byViewType = itemTypeForFetch === "missing" ? post.itemType === "lost" : post.itemType === "found";
-      return byViewType;
-    });
-  }, [posts, itemTypeForFetch, selectedType]);
+    const visiblePosts = posts.filter((post) => !dismissedPostIds.includes(post.postId));
+    return filterDashboardPosts(visiblePosts, selectedType, itemTypeForFetch);
+  }, [dismissedPostIds, itemTypeForFetch, posts, selectedType]);
 
-  useEffect(() => {
-    fetchPosts({
-      ...(itemTypeForFetch ? { itemType: itemTypeForFetch } : {}),
-      postStatus: "pending",
-      pageSize: 10,
-    });
-  }, [fetchPosts, itemTypeForFetch]);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  const handleRefresh = () => {
-    refresh();
+  const handleRefresh = async () => {
+    setDismissedPostIds([]);
+    await Promise.all([dashboardPostsQuery.refetch(), dashboardStatsQuery.refetch()]);
     feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -120,6 +109,7 @@ export function StaffDashboardView() {
     setIsSubmittingDecision(true);
     setPendingDecisionPostId(post.postId);
     setPendingDecisionType(decision === "accepted" ? "accept" : "reject");
+
     try {
       await updatePostStatus(post.postId, {
         status: decision,
@@ -148,8 +138,12 @@ export function StaffDashboardView() {
         ...(post.imageUrl ? { image_url: post.imageUrl } : {}),
       });
 
-      removePost(post.postId);
-      void fetchStats();
+      setDismissedPostIds((current) => [...current, post.postId]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: postKeys.dashboard({ postStatus: "pending", ...(itemTypeForFetch ? { itemType: itemTypeForFetch } : {}), pageSize: 10 }) }),
+        queryClient.invalidateQueries({ queryKey: postKeys.dashboardStats }),
+      ]);
+
       pushToast(
         decision === "accepted" ? "Post accepted and owner notified" : "Post rejected and owner notified",
         decision === "accepted" ? "success" : "danger"
@@ -187,179 +181,55 @@ export function StaffDashboardView() {
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
-    if (!hasMore) return;
+    if (!dashboardPostsQuery.hasNextPage || dashboardPostsQuery.isFetchingNextPage) return;
     if (target.scrollTop + target.clientHeight >= target.scrollHeight - 120) {
-      loadMore();
+      void dashboardPostsQuery.fetchNextPage();
     }
   };
 
+  const errorMessage =
+    dashboardPostsQuery.error instanceof Error
+      ? dashboardPostsQuery.error.message
+      : dashboardStatsQuery.error instanceof Error
+        ? dashboardStatsQuery.error.message
+        : null;
+  const isInitialLoading = dashboardPostsQuery.isLoading;
+  const isRefreshing = dashboardPostsQuery.isRefetching || dashboardStatsQuery.isRefetching;
+  const stats = dashboardStatsQuery.data ?? { pendingClaims: 0, fraudReports: 0, unreadAlerts: 0 };
+
   return (
     <section className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-12">
-      <div
-        ref={feedRef}
+      <DashboardFeed
+        feedRef={feedRef}
         onScroll={handleScroll}
-        className="min-h-0 space-y-4 overflow-y-auto pr-1 lg:col-span-8"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold text-[#1D2981]">Staff Dashboard</h1>
-            <p className="mt-1 text-sm text-slate-600">Review and manage pending posts submitted by users.</p>
-            <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-              <span>View mode:</span>
-              <PostTagChip
-                label={selectedType === "all" ? "All Items" : selectedType === "lost" ? "Missing" : "Found"}
-                tone="primary"
-              />
-              <span className="text-slate-400">•</span>
-              <span className="text-slate-500">Showing Pending Post Only</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm hover:bg-slate-50"
-          >
-            <RefreshCcw className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            {isRefreshing ? "Refreshing..." : "Refresh"}
-          </button>
-        </div>
-
-        <CustomToastStack toasts={toasts} />
-
-        {error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            {error}
-          </div>
-        ) : null}
-
-        {isLoading && filteredPosts.length === 0 ? (
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={`dashboard-loading-${index}`}
-                className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="h-4 w-40 animate-pulse rounded-full bg-slate-200" />
-                <div className="mt-3 h-5 w-3/4 animate-pulse rounded-full bg-slate-200" />
-                <div className="mt-4 h-40 w-full animate-pulse rounded-2xl bg-slate-200" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          filteredPosts.map((post) => (
-            <CompactPostCard
-              key={post.postId}
-              post={post}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              actionsDisabled={isSubmittingDecision}
-              loadingAction={pendingDecisionPostId === post.postId ? pendingDecisionType : null}
-            />
-          ))
-        )}
-        {filteredPosts.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
-            {isLoading ? "Loading posts..." : "No posts match the selected filters."}
-          </p>
-        ) : null}
-        {!hasMore && filteredPosts.length > 0 ? (
-          <p className="text-center text-sm text-slate-500">You&apos;re all caught up!</p>
-        ) : null}
-      </div>
-
-      <aside className="min-h-0 space-y-3 overflow-y-auto pr-1 lg:col-span-4">
-        <StaffStatCard
-          title="Pending Claims"
-          value={stats.pendingClaims}
-          onClick={() => router.push("/staff/post-records")}
-        />
-        <StaffStatCard
-          title="Fraud Reports"
-          value={stats.fraudReports}
-          onClick={() => router.push("/staff/fraud-reports")}
-        />
-        <StaffStatCard
-          title="Unread Alerts"
-          value={stats.unreadAlerts}
-          onClick={() => router.push("/staff/notifications")}
-        />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-sm font-semibold text-[#1D2981]">Item Type</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {([
-              { label: "All", value: "all" },
-              { label: "Missing", value: "lost" },
-              { label: "Found", value: "found" },
-            ] as const).map((option) => {
-              const isActive = selectedType === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() =>
-                    router.push(option.value === "all" ? "/staff" : `/staff?type=${option.value}`)
-                  }
-                  className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                    isActive
-                      ? "border-[#1D2981]/20 bg-[#1D2981]/10 font-medium text-[#1D2981]"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </aside>
-      {pendingRejectPost ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-slate-900">Reject Post</h2>
-            <p className="mt-2 text-sm text-slate-600">Select a reason to reject the post.</p>
-            <div className="mt-4 space-y-2">
-              {rejectReasons.map((reason) => {
-                const isActive = selectedRejectReason === reason;
-                return (
-                  <button
-                    key={reason}
-                    type="button"
-                    onClick={() => setSelectedRejectReason(reason)}
-                    className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition ${
-                      isActive
-                        ? "border-[#1D2981]/30 bg-[#1D2981]/10 text-[#1D2981]"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {reason}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (isSubmittingDecision) return;
-                  setPendingRejectPost(null);
-                  setSelectedRejectReason("");
-                }}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isSubmittingDecision}
-                onClick={handleRejectConfirm}
-                className="rounded-full bg-rose-600 px-4 py-2 text-sm text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmittingDecision ? "Rejecting..." : "Reject Post"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+        selectedType={selectedType}
+        isRefreshing={isRefreshing}
+        onRefresh={() => void handleRefresh()}
+        toasts={toasts}
+        errorMessage={errorMessage}
+        isInitialLoading={isInitialLoading}
+        filteredPosts={filteredPosts}
+        hasNextPage={dashboardPostsQuery.hasNextPage}
+        onAccept={handleAccept}
+        onReject={handleReject}
+        pendingDecisionPostId={pendingDecisionPostId}
+        isSubmittingDecision={isSubmittingDecision}
+        pendingDecisionType={pendingDecisionType}
+      />
+      <DashboardSidebar stats={stats} selectedType={selectedType} onNavigate={(path) => router.push(path)} />
+      <DashboardRejectModal
+        isOpen={Boolean(pendingRejectPost)}
+        rejectReasons={rejectReasons}
+        selectedRejectReason={selectedRejectReason}
+        isSubmittingDecision={isSubmittingDecision}
+        onSelectReason={setSelectedRejectReason}
+        onCancel={() => {
+          if (isSubmittingDecision) return;
+          setPendingRejectPost(null);
+          setSelectedRejectReason("");
+        }}
+        onConfirm={handleRejectConfirm}
+      />
     </section>
   );
 }

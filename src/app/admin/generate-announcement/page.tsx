@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CustomToast } from "@/components/ui/custom-toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { logError } from "@/lib/error-utils";
 import { createAnnouncement } from "@/services/announcements-service";
 import { insertAuditLog } from "@/services/audit-logs-service";
 import { uploadAndGetPublicUrl } from "@/services/storage-service";
@@ -97,7 +98,7 @@ export default function AdminGenerateAnnouncementPage() {
           const path = `announcements/${Date.now()}_${image.name}`;
           imageUrl = await uploadAndGetPublicUrl("items", path, image);
         } catch (uploadError) {
-          console.error("Failed to upload image:", uploadError);
+          logError("Failed to upload image:", uploadError);
           showToast("Failed to upload image. Posting without image.", "danger");
         }
       }
@@ -125,7 +126,7 @@ export default function AdminGenerateAnnouncementPage() {
           },
         });
       } catch (auditError) {
-        console.error("Failed to insert audit log:", auditError);
+        logError("Failed to insert audit log:", auditError);
         // Continue even if audit log fails
       }
 
@@ -145,7 +146,7 @@ export default function AdminGenerateAnnouncementPage() {
         router.push("/admin/announcement");
       }, 1500);
     } catch (error) {
-      console.error("Failed to post announcement:", error);
+      logError("Failed to post announcement:", error);
       showToast("Failed to post announcement. Please try again.", "danger");
     } finally {
       setLoading(false);

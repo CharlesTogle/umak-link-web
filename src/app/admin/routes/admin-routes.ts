@@ -6,11 +6,11 @@ import {
   Megaphone,
 } from "lucide-react";
 
-export type AdminRouteItem = {
+export interface AdminRouteItem {
   label: string;
   href: string;
   icon: LucideIcon;
-};
+}
 
 export const adminPrimaryRoutes: AdminRouteItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },

@@ -1,3 +1,5 @@
+import { logError } from "@/lib/error-utils";
+
 /**
  * Convert UTC date to Philippine time (UTC+8)
  * @param utcDate - ISO string in UTC
@@ -24,7 +26,7 @@ export function toPhilippineTime(utcDate: string | null): string {
 
     return phTime.toLocaleString("en-US", options);
   } catch (error) {
-    console.error("Error formatting date:", error);
+    logError("Error formatting date:", error);
     return "Invalid date";
   }
 }
@@ -52,7 +54,7 @@ export function toPhilippineDate(utcDate: string | null): string {
 
     return phTime.toLocaleString("en-US", options);
   } catch (error) {
-    console.error("Error formatting date:", error);
+    logError("Error formatting date:", error);
     return "Invalid date";
   }
 }
@@ -83,7 +85,7 @@ export function getRelativeTime(utcDate: string | null): string {
     if (diffMonth < 12) return `${diffMonth} month${diffMonth !== 1 ? "s" : ""} ago`;
     return `${diffYear} year${diffYear !== 1 ? "s" : ""} ago`;
   } catch (error) {
-    console.error("Error calculating relative time:", error);
+    logError("Error calculating relative time:", error);
     return "Unknown";
   }
 }

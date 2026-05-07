@@ -4,11 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, CircleHelp, LogOut, UserCircle2 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { adminPrimaryRoutes } from "@/app/admin/routes/admin-routes";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useUnreadNotificationsCount } from "@/hooks/queries/notification-queries";
 import { useAuthStore } from "@/stores/auth-store";
-import { fetchUnreadNotificationsCount } from "@/services/notifications-service";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/admin") return pathname === "/admin";
@@ -21,32 +20,9 @@ export function AdminSidebar() {
   const clearSession = useAuthStore((state) => state.clearSession);
   const { user, isLoading } = useCurrentUser();
   const infoActive = isActive(pathname, "/admin/info");
-
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [countLoading, setCountLoading] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const loadCount = async () => {
-      try {
-        setCountLoading(true);
-        const data = await fetchUnreadNotificationsCount();
-        setUnreadCount(data.unread_count);
-      } catch (error) {
-        console.error("Failed to fetch unread count:", error);
-      } finally {
-        setCountLoading(false);
-      }
-    };
-
-    loadCount();
-
-    // Poll for updates every 30 seconds
-    const interval = setInterval(loadCount, 30000);
-
-    return () => clearInterval(interval);
-  }, [user]);
+  const unreadCountQuery = useUnreadNotificationsCount(Boolean(user));
+  const unreadCount = unreadCountQuery.data?.unread_count ?? 0;
+  const countLoading = unreadCountQuery.isLoading;
 
   const profileName = user?.user_name?.trim() || "Admin User";
 

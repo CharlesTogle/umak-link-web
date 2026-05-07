@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-type FilterOption = {
+interface FilterOption {
   key: "postStatus" | "itemStatus" | "itemType";
   label: string;
   value: string;
-};
+}
 
 const filterGroups: Array<{ label: string; key: FilterOption["key"]; options: FilterOption[] }> = [
   {

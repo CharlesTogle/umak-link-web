@@ -20,7 +20,7 @@ export interface NotificationData {
   description?: string | null;
   is_read?: boolean | null;
   created_at?: string | null;
-  data?: any;
+  data?: Record<string, unknown>;
   sent_to?: string | null | undefined;
   sent_by?: string | null | undefined;
   image_url?: string | null | undefined;

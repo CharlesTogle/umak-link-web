@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Plus, RefreshCw, Megaphone, Image as ImageIcon } from "lucide-react";
 import { PhotoProvider, PhotoView } from "react-photo-view";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { logError } from "@/lib/error-utils";
 import { fetchAnnouncements, type Announcement } from "@/services/announcements-service";
 
 const PAGE_SIZE = 30;
@@ -102,7 +103,7 @@ export default function AdminAnnouncementPage() {
       // Check if there are more items to load
       setHasMore(count ? currentOffset + PAGE_SIZE < count : false);
     } catch (error) {
-      console.error("Error loading announcements", error);
+      logError("Error loading announcements", error);
       if (isInitial) setAnnouncements([]);
     } finally {
       if (isInitial) {

@@ -5,6 +5,7 @@ import { MoreVertical, Trash2, CheckCheck } from "lucide-react";
 import { NotificationItem } from "@/components/staff/notification-item";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { logError } from "@/lib/error-utils";
 import {
   fetchNotifications,
   markNotificationAsRead,
@@ -32,7 +33,7 @@ export default function StaffNotificationsPage() {
       const data = await fetchNotifications();
       setNotifications(data);
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+      logError("Failed to fetch notifications:", error);
     } finally {
       setLoading(false);
     }
@@ -45,7 +46,7 @@ export default function StaffNotificationsPage() {
         prev.map((n) => (n.notification_id === id ? { ...n, is_read: true } : n))
       );
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
+      logError("Failed to mark notification as read:", error);
     }
   };
 
@@ -54,7 +55,7 @@ export default function StaffNotificationsPage() {
       await deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n.notification_id !== id));
     } catch (error) {
-      console.error("Failed to delete notification:", error);
+      logError("Failed to delete notification:", error);
     }
   };
 
@@ -64,7 +65,7 @@ export default function StaffNotificationsPage() {
       await Promise.all(notifications.map((n) => deleteNotification(n.notification_id)));
       setNotifications([]);
     } catch (error) {
-      console.error("Failed to delete all notifications:", error);
+      logError("Failed to delete all notifications:", error);
     }
   };
 
@@ -74,7 +75,7 @@ export default function StaffNotificationsPage() {
       await Promise.all(notifications.map((n) => markNotificationAsRead(n.notification_id)));
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch (error) {
-      console.error("Failed to mark all as read:", error);
+      logError("Failed to mark all as read:", error);
     }
   };
 
@@ -157,7 +158,7 @@ export default function StaffNotificationsPage() {
           // Empty state
           <div className="flex h-full items-center justify-center px-4 py-20 text-center">
             <div>
-              <p className="text-lg font-medium text-slate-900">You're all caught up</p>
+              <p className="text-lg font-medium text-slate-900">You&apos;re all caught up</p>
               <p className="mt-1 text-sm text-slate-500">No notifications to display</p>
             </div>
           </div>
@@ -174,7 +175,7 @@ export default function StaffNotificationsPage() {
                   description: notification.description || notification.body,
                   is_read: notification.is_read,
                   created_at: notification.created_at,
-                  data: notification.data,
+                  ...(notification.data ? { data: notification.data } : {}),
                   sent_to: notification.sent_to,
                   sent_by: notification.sent_by,
                   image_url: notification.image_url,

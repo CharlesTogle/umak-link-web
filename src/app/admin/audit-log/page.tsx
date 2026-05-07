@@ -180,8 +180,8 @@ export default function AdminAuditLogPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#1D2981]">Audit Log</h1>
-          <p className="mt-1 text-sm text-slate-600">Track all system activities and user actions for security and compliance.</p>
+          <h1 className="text-3xl font-bold text-[#1D2981]">Audit Trail</h1>
+          <p className="mt-1 text-sm text-slate-600">Track all chronological staff and administrator actions across the portal.</p>
         </div>
         <Button onClick={handleRefresh} variant="outline" size="sm" disabled={loading}>
           <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
@@ -322,7 +322,7 @@ export default function AdminAuditLogPage() {
 
               {/* End Message */}
               {!hasMore && displayLogs.length > 0 && (
-                <div className="py-4 text-center text-sm text-slate-500">All audit logs loaded</div>
+                <div className="py-4 text-center text-sm text-slate-500">You&apos;re all caught up</div>
               )}
             </>
           )}

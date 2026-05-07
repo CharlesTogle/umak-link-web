@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CustomToast } from "@/components/ui/custom-toast";
 import {
@@ -8,6 +8,12 @@ import {
   useStaffSearchResults,
   type StaffSearchFilters,
 } from "@/hooks/queries/staff-search-queries";
+import { shareLink } from "@/lib/share-link";
+import {
+  addStaffSearchHistoryEntry,
+  readStaffSearchHistory,
+  removeStaffSearchHistoryEntry,
+} from "@/lib/staff-search-history";
 import { sendNotification } from "@/services/notifications-service";
 import { generateReverseImageQuery } from "@/services/search-service";
 import type { PostRecord, PostRecordAction } from "@/types/post-record";
@@ -53,13 +59,13 @@ function toggleArrayValue<T>(values: T[], value: T): T[] {
 export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const autoSearchedQueryRef = useRef("");
   const [toast, setToast] = useState<{ message: string; tone: "success" | "danger" } | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<StaffSearchFilters>(initialStaffSearchFilters);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   const urlQuery = (searchParams.get("q") ?? "").trim();
   const submittedQuery = autoSearchFromUrl ? urlQuery : "";
@@ -75,6 +81,10 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
     const timer = window.setTimeout(() => setToast(null), 3000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    setRecentSearches(readStaffSearchHistory());
+  }, []);
 
   useEffect(() => {
     const syncNetworkState = () => {
@@ -94,11 +104,6 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
   useEffect(() => {
     if (!autoSearchFromUrl) return;
     setQuery(urlQuery);
-  }, [autoSearchFromUrl, urlQuery]);
-
-  useEffect(() => {
-    if (!autoSearchFromUrl || !urlQuery) return;
-    autoSearchedQueryRef.current = urlQuery;
   }, [autoSearchFromUrl, urlQuery]);
 
   const runSearchFromForm = async () => {
@@ -147,6 +152,7 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
       return;
     }
 
+    setRecentSearches(addStaffSearchHistoryEntry(effectiveQuery));
     const nextPath = `/staff/search/results?q=${encodeURIComponent(effectiveQuery)}`;
     router.push(nextPath);
   };
@@ -156,15 +162,33 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
     setFilters(initialStaffSearchFilters);
     setSelectedImage(null);
     setIsAnalyzingImage(false);
-    autoSearchedQueryRef.current = "";
     if (autoSearchFromUrl) {
       router.replace("/staff/search/results");
     }
   };
 
+  const handleCancel = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/staff/post-records");
+  };
+
   const handleRetry = () => {
     if (!autoSearchFromUrl || !submittedQuery) return;
     void searchQuery.refetch();
+  };
+
+  const handleUseRecentSearch = (recentSearch: string) => {
+    setQuery(recentSearch);
+    setRecentSearches(addStaffSearchHistoryEntry(recentSearch));
+    router.push(`/staff/search/results?q=${encodeURIComponent(recentSearch)}`);
+  };
+
+  const handleRemoveRecentSearch = (recentSearch: string) => {
+    setRecentSearches(removeStaffSearchHistoryEntry(recentSearch));
   };
 
   const handleAction = (action: PostRecordAction, record: PostRecord) => {
@@ -180,10 +204,22 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
 
     if (action === "share") {
       const shareUrl = `${window.location.origin}/staff/post-record/view/${record.postId}`;
-      navigator.clipboard
-        .writeText(shareUrl)
-        .then(() => setToast({ message: "Link copied to clipboard", tone: "success" }))
-        .catch(() => setToast({ message: "Failed to copy link", tone: "danger" }));
+      shareLink({
+        title: record.itemName,
+        text: `View the ${record.itemName} post record.`,
+        url: shareUrl,
+      })
+        .then((result) => {
+          if (result === "copied") {
+            setToast({ message: "Link copied to clipboard", tone: "success" });
+            return;
+          }
+
+          if (result === "shared") {
+            setToast({ message: "Post shared successfully", tone: "success" });
+          }
+        })
+        .catch(() => setToast({ message: "Failed to share post", tone: "danger" }));
       return;
     }
 
@@ -195,7 +231,7 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
 
       navigator.clipboard
         .writeText(record.itemId)
-        .then(() => setToast({ message: "Item ID copied", tone: "success" }))
+        .then(() => setToast({ message: "Item ID copied to clipboard", tone: "success" }))
         .catch(() => setToast({ message: "Failed to copy Item ID", tone: "danger" }));
       return;
     }
@@ -214,7 +250,7 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
       data: { postId: record.postId, itemId: record.itemId },
       ...(record.imageUrl ? { image_url: record.imageUrl } : {}),
     })
-      .then(() => setToast({ message: "Owner notified successfully", tone: "success" }))
+      .then(() => setToast({ message: "Owner notified successfully!", tone: "success" }))
       .catch(() => setToast({ message: "Failed to notify owner", tone: "danger" }));
   };
 
@@ -231,12 +267,14 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
         errorMessage={errorMessage}
         isLoading={searchQuery.isLoading}
         results={results}
+        onCancel={handleCancel}
         onRetry={handleRetry}
         onAction={handleAction}
       />
       <SearchControlsPanel
         query={query}
         filters={filters}
+        recentSearches={recentSearches}
         selectedImage={selectedImage}
         isLoading={searchQuery.isLoading}
         isAnalyzingImage={isAnalyzingImage}
@@ -261,6 +299,8 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
         }
         onSortChange={(value) => setFilters((current) => ({ ...current, sort: value }))}
         onSortDirectionChange={(value) => setFilters((current) => ({ ...current, sortDirection: value }))}
+        onUseRecentSearch={handleUseRecentSearch}
+        onRemoveRecentSearch={handleRemoveRecentSearch}
         onClear={handleClear}
       />
 

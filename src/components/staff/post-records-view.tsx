@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CustomToast } from "@/components/ui/custom-toast";
 import { flattenInfinitePages, usePostRecords } from "@/hooks/queries/post-queries";
 import { buildPostRecordsUrl, getPostRecordFiltersFromSearchParams } from "@/lib/post-record-filters";
+import { shareLink } from "@/lib/share-link";
 import { sendNotification } from "@/services/notifications-service";
 import {
   PostRecordsFeed,
@@ -120,9 +121,21 @@ export function PostRecordsView() {
 
     if (action === "share") {
       const shareUrl = `${window.location.origin}/staff/post-record/view/${record.postId}`;
-      navigator.clipboard
-        .writeText(shareUrl)
-        .then(() => setToast({ message: "Link copied to clipboard", tone: "success" }))
+      shareLink({
+        title: record.itemName,
+        text: `View the ${record.itemName} post record.`,
+        url: shareUrl,
+      })
+        .then((result) => {
+          if (result === "copied") {
+            setToast({ message: "Link copied to clipboard", tone: "success" });
+            return;
+          }
+
+          if (result === "shared") {
+            setToast({ message: "Post shared successfully", tone: "success" });
+          }
+        })
         .catch(() => setToast({ message: "Failed to share post", tone: "danger" }));
       return;
     }
@@ -177,7 +190,7 @@ export function PostRecordsView() {
     })
       .then(() => {
         lastNotifyTimeRef.current.set(record.postId, Date.now());
-        setToast({ message: "Owner notified successfully", tone: "success" });
+        setToast({ message: "Owner notified successfully!", tone: "success" });
       })
       .catch(() => {
         setToast({ message: "Failed to notify owner", tone: "danger" });

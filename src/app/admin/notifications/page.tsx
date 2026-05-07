@@ -1,3 +1,5 @@
+import { PortalNotificationsView } from "@/components/notifications/portal-notifications-view";
+
 export default function AdminNotificationsPage() {
-  return <h1 className="text-2xl font-semibold text-[#1D2981]">Admin Notifications (Dummy)</h1>;
+  return <PortalNotificationsView />;
 }

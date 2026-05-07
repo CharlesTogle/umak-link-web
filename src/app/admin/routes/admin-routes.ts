@@ -15,6 +15,6 @@ export interface AdminRouteItem {
 export const adminPrimaryRoutes: AdminRouteItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "User Management", href: "/admin/admin-management", icon: UserCog },
-  { label: "Audit Log", href: "/admin/audit-log", icon: FileClock },
+  { label: "Audit Trail", href: "/admin/audit-trail", icon: FileClock },
   { label: "Announcements", href: "/admin/announcement", icon: Megaphone },
 ];

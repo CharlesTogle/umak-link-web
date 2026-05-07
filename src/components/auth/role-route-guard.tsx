@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { getRoleHomePath } from "@/lib/role-routing";
 import type { PortalUserType } from "@/types/auth";
 
 interface RoleRouteGuardProps {
@@ -26,7 +25,7 @@ export function RoleRouteGuard({ allowedRoles, children }: RoleRouteGuardProps) 
     }
 
     if (!allowedRoles.includes(user.user_type)) {
-      router.replace(getRoleHomePath(user.user_type));
+      router.replace("/not-allowed");
     }
   }, [allowedRoles, isLoading, router, user]);
 

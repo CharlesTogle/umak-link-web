@@ -20,8 +20,46 @@ import Image from "next/image";
 
 interface NotificationItemProps {
   notification: NotificationData;
+  postHrefBase?: string | null;
   onMarkAsRead?: (id: string | number) => void;
   onDelete?: (id: string | number) => void;
+}
+
+function toStringValue(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+    return trimmedValue.length > 0 ? trimmedValue : null;
+  }
+
+  if (typeof value === "number") {
+    return String(value);
+  }
+
+  return null;
+}
+
+function resolveNotificationHref(
+  notification: NotificationData,
+  postHrefBase?: string | null
+): string | null {
+  const explicitHref =
+    toStringValue(notification.data?.url) ??
+    toStringValue(notification.data?.href) ??
+    toStringValue(notification.data?.link);
+  const postId = toStringValue(notification.data?.postId);
+
+  if (
+    explicitHref &&
+    !(postHrefBase && postId && explicitHref.startsWith("/user/"))
+  ) {
+    return explicitHref;
+  }
+
+  if (postHrefBase && postId) {
+    return `${postHrefBase}/${postId}`;
+  }
+
+  return explicitHref;
 }
 
 function iconForType(type: NotificationType | string) {
@@ -53,7 +91,12 @@ function iconForType(type: NotificationType | string) {
   }
 }
 
-export function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
+export function NotificationItem({
+  notification,
+  postHrefBase = null,
+  onMarkAsRead,
+  onDelete,
+}: NotificationItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const router = useRouter();
@@ -62,16 +105,9 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
   const isRead = notification.is_read ?? false;
 
   const handleClick = () => {
-    // Parse href from notification data if available
-    const href =
-      typeof notification.data?.url === "string"
-        ? notification.data.url
-        : typeof notification.data?.href === "string"
-          ? notification.data.href
-          : null;
+    const href = resolveNotificationHref(notification, postHrefBase);
 
     if (href) {
-      // Mark as read before navigating
       if (!isRead && onMarkAsRead) {
         onMarkAsRead(notification.notification_id);
       }
@@ -173,7 +209,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
                   className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                 >
                   <CheckCircle className="size-4" />
-                  Mark as Read
+                  Mark as read
                 </button>
               )}
               <button
@@ -181,7 +217,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
                 className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="size-4" />
-                Delete
+                Delete notification
               </button>
             </div>
           </>

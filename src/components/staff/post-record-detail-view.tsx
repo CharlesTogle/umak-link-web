@@ -4,7 +4,8 @@ import { useCallback, useEffect, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import { PhotoProvider } from "react-photo-view";
 import { useLinkedPost, usePostDetail } from "@/hooks/queries/post-queries";
-import { normalizeValue } from "@/lib/format-utils";
+import { normalizeValue, toDisplayLabel } from "@/lib/format-utils";
+import { shareLink } from "@/lib/share-link";
 import { deleteClaimByItem } from "@/services/claims-service";
 import { sendNotification } from "@/services/notifications-service";
 import { updateItemStatus, updatePostStatus } from "@/services/posts-service";
@@ -44,7 +45,7 @@ function getStatusChipClass(active: boolean, disabled = false): string {
 }
 
 function getItemStatusOptions(itemType: string | undefined): ApiItemStatus[] {
-  return itemType === "found" ? ["claimed", "unclaimed", "discarded"] : ["returned", "lost"];
+  return itemType === "missing" ? ["claimed", "unclaimed", "discarded"] : ["returned", "lost"];
 }
 
 function isItemStatusAllowed(itemStatus: ApiItemStatus, selectedPostStatus: ApiPostStatus | null): boolean {
@@ -67,6 +68,112 @@ function getLinkedOwnerName(linkedPost: LinkedPostRecord): string {
 
 function getLinkedPostAvatar(linkedPost: LinkedPostRecord): string | null {
   return linkedPost.poster_profile_picture_url ?? null;
+}
+
+function buildStatusChangeNotifications(params: {
+  posterId: string | null | undefined;
+  postId: string | number;
+  itemName: string;
+  imageUrl?: string | null;
+  previousPostStatus: ApiPostStatus;
+  nextPostStatus: ApiPostStatus;
+  previousItemStatus: ApiItemStatus;
+  nextItemStatus: ApiItemStatus;
+  rejectionReason?: string;
+}) {
+  if (!params.posterId) return [];
+
+  const notifications: Array<{
+    user_id: string;
+    title: string;
+    body: string;
+    description?: string;
+    type: string;
+    data: Record<string, unknown>;
+    image_url?: string;
+  }> = [];
+
+  const notificationData = {
+    postId: String(params.postId),
+  };
+
+  if (
+    params.nextPostStatus !== params.previousPostStatus ||
+    params.rejectionReason
+  ) {
+    if (params.nextPostStatus === "accepted") {
+      notifications.push({
+        user_id: params.posterId,
+        title: "Post Accepted",
+        body: `Your post about "${params.itemName}" has been accepted and is now visible on the platform.`,
+        description: "Your post is now visible on the platform.",
+        type: "acceptance",
+        data: notificationData,
+        ...(params.imageUrl ? { image_url: params.imageUrl } : {}),
+      });
+    } else if (params.nextPostStatus === "rejected") {
+      notifications.push({
+        user_id: params.posterId,
+        title: "Post Rejected",
+        body: `Your post about "${params.itemName}" has been rejected and will not be published on the platform. You can edit and submit again or delete it. Reason: ${params.rejectionReason ?? "No reason provided."}`,
+        description: params.rejectionReason ?? "Post rejected",
+        type: "rejection",
+        data: notificationData,
+        ...(params.imageUrl ? { image_url: params.imageUrl } : {}),
+      });
+    } else if (params.nextPostStatus === "pending") {
+      notifications.push({
+        user_id: params.posterId,
+        title: "Post Status Updated",
+        body: `The status of your post "${params.itemName}" has been changed to pending.`,
+        description: "Your post status has been changed to pending.",
+        type: "progress",
+        data: notificationData,
+        ...(params.imageUrl ? { image_url: params.imageUrl } : {}),
+      });
+    }
+  }
+
+  if (params.nextItemStatus !== params.previousItemStatus) {
+    if (params.nextItemStatus === "discarded") {
+      notifications.push({
+        user_id: params.posterId,
+        title: "Item Discarded",
+        body: `The item "${params.itemName}" has been discarded and is no longer available for claim.`,
+        description: "This item is no longer available for claim.",
+        type: "delete",
+        data: notificationData,
+        ...(params.imageUrl ? { image_url: params.imageUrl } : {}),
+      });
+    } else if (
+      params.previousItemStatus === "discarded" &&
+      params.nextItemStatus === "unclaimed"
+    ) {
+      notifications.push({
+        user_id: params.posterId,
+        title: "Item Retrieved",
+        body: `Great news! The item "${params.itemName}" that was previously discarded has been retrieved and is now ready to be claimed again.`,
+        description: "This item is now ready to be claimed again.",
+        type: "success",
+        data: notificationData,
+        ...(params.imageUrl ? { image_url: params.imageUrl } : {}),
+      });
+    } else {
+      notifications.push({
+        user_id: params.posterId,
+        title: "Item Status Updated",
+        body: `The status of your item "${params.itemName}" has been changed to ${toDisplayLabel(
+          params.nextItemStatus
+        ).toLowerCase()}.`,
+        description: `Item status changed to ${toDisplayLabel(params.nextItemStatus).toLowerCase()}.`,
+        type: "info",
+        data: notificationData,
+        ...(params.imageUrl ? { image_url: params.imageUrl } : {}),
+      });
+    }
+  }
+
+  return notifications;
 }
 
 export function PostRecordDetailView({ postId }: { postId: string }) {
@@ -127,6 +234,9 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
   const performStatusChange = useCallback(async () => {
     if (!record || ui.isSubmitting) return;
     dispatchUi({ type: "set_submitting", value: true });
+    const nextPostStatus = ui.selectedStatus ?? normalizedPostStatus;
+    const nextItemStatus = ui.selectedItemStatus ?? normalizedItemStatus;
+
     try {
       if (ui.selectedStatus && ui.selectedStatus !== normalizedPostStatus) {
         await updatePostStatus(String(record.post_id), { status: ui.selectedStatus });
@@ -138,9 +248,21 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
         }
         await updateItemStatus(record.item_id, { status: ui.selectedItemStatus });
       }
+      await Promise.allSettled(
+        buildStatusChangeNotifications({
+          posterId: record.poster_id,
+          postId: record.post_id,
+          itemName: record.item_name,
+          imageUrl: record.item_image_url,
+          previousPostStatus: normalizedPostStatus,
+          nextPostStatus,
+          previousItemStatus: normalizedItemStatus,
+          nextItemStatus,
+        }).map((notification) => sendNotification(notification))
+      );
       await postQuery.refetch();
       await linkedPostQuery.refetch();
-      setToast("Status updated successfully", "success");
+      setToast("Status changed successfully.", "success");
       dispatchUi({ type: "set_modal", modal: "showStatusModal", value: false });
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Failed to update status", "danger");
@@ -176,8 +298,29 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
     dispatchUi({ type: "set_submitting", value: true });
     try {
       await updatePostStatus(String(record.post_id), { status: "rejected", rejection_reason: reason });
+      if (ui.selectedItemStatus && ui.selectedItemStatus !== normalizedItemStatus) {
+        if (!record.item_id) throw new Error("Item ID is missing");
+        if (normalizedItemStatus === "claimed" && ui.selectedItemStatus !== "claimed") {
+          await deleteClaimByItem(record.item_id);
+        }
+        await updateItemStatus(record.item_id, { status: ui.selectedItemStatus });
+      }
+      await Promise.allSettled(
+        buildStatusChangeNotifications({
+          posterId: record.poster_id,
+          postId: record.post_id,
+          itemName: record.item_name,
+          imageUrl: record.item_image_url,
+          previousPostStatus: normalizedPostStatus,
+          nextPostStatus: "rejected",
+          previousItemStatus: normalizedItemStatus,
+          nextItemStatus: ui.selectedItemStatus ?? normalizedItemStatus,
+          rejectionReason: reason,
+        }).map((notification) => sendNotification(notification))
+      );
       await postQuery.refetch();
-      setToast("Post rejected successfully", "success");
+      await linkedPostQuery.refetch();
+      setToast("Status changed successfully.", "success");
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Failed to reject post", "danger");
     } finally {
@@ -197,9 +340,9 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
         body: `We have identified items that may possibly match your ${record.item_name}. Please proceed to the Security Office during office hours to verify if any of them belong to you.`,
         description: "Please proceed to the Security Office during office hours.",
         type: "match",
-        data: { postId: String(record.post_id), itemName: record.item_name, link: `/user/post/view/${record.post_id}` },
+        data: { postId: String(record.post_id), itemName: record.item_name },
       });
-      setToast("Notification sent to owner successfully", "success");
+      setToast("Owner notified successfully!", "success");
     } catch {
       setToast("Failed to send notification to owner", "danger");
     }
@@ -208,10 +351,21 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
   const handleShare = async () => {
     if (!record) return;
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/staff/post-record/view/${record.post_id}`);
-      setToast("Link copied to clipboard", "success");
+      const shareResult = await shareLink({
+        title: record.item_name,
+        text: `View the ${record.item_name} post record.`,
+        url: `${window.location.origin}/staff/post-record/view/${record.post_id}`,
+      });
+
+      if (shareResult === "copied") {
+        setToast("Link copied to clipboard", "success");
+      }
+
+      if (shareResult === "shared") {
+        setToast("Post shared successfully", "success");
+      }
     } catch {
-      setToast("Failed to copy link", "danger");
+      setToast("Failed to share post", "danger");
     }
   };
 

@@ -1,12 +1,12 @@
 import { requestCreatePostAutofill } from "@/services/create-post-service";
 
-const RATE_LIMIT_KEY = "ai_autofill_timestamps";
+export const AI_AUTOFILL_RATE_LIMIT_KEY = "ai_autofill_timestamps";
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS = 10;
 
 function readTimestamps(): number[] {
   try {
-    const raw = window.localStorage.getItem(RATE_LIMIT_KEY);
+    const raw = window.localStorage.getItem(AI_AUTOFILL_RATE_LIMIT_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "number") : [];
@@ -17,7 +17,7 @@ function readTimestamps(): number[] {
 
 function writeTimestamps(timestamps: number[]): void {
   try {
-    window.localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(timestamps));
+    window.localStorage.setItem(AI_AUTOFILL_RATE_LIMIT_KEY, JSON.stringify(timestamps));
   } catch {
     // noop
   }

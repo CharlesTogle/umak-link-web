@@ -10,6 +10,7 @@ import {
   useDashboardPosts,
   useDashboardStats,
 } from "@/hooks/queries/post-queries";
+import { shareLink } from "@/lib/share-link";
 import { updatePostStatus } from "@/services/posts-service";
 import { sendNotification } from "@/services/notifications-service";
 import {
@@ -28,6 +29,7 @@ export function StaffDashboardView() {
   const feedRef = useRef<HTMLDivElement | null>(null);
   const toastIdRef = useRef(0);
   const toastTimersRef = useRef<Map<string, number>>(new Map());
+  const lastNotifyTimeRef = useRef<Map<string, number>>(new Map());
   const [dismissedPostIds, setDismissedPostIds] = useState<string[]>([]);
 
   const typeFromUrl = searchParams.get("type");
@@ -49,7 +51,7 @@ export function StaffDashboardView() {
   const [selectedRejectReason, setSelectedRejectReason] = useState("");
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [pendingDecisionPostId, setPendingDecisionPostId] = useState<string | null>(null);
-  const [pendingDecisionType, setPendingDecisionType] = useState<"accept" | "reject" | null>(null);
+  const [pendingDecisionType, setPendingDecisionType] = useState<"accept" | "reject" | "notify" | null>(null);
 
   const rejectReasons = [
     "Item is not identified in storage.",
@@ -95,6 +97,14 @@ export function StaffDashboardView() {
     feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const dismissAndRefreshPost = async (postId: string) => {
+    setDismissedPostIds((current) => [...current, postId]);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: postKeys.dashboard({ postStatus: "pending", ...(itemTypeForFetch ? { itemType: itemTypeForFetch } : {}), pageSize: 10 }) }),
+      queryClient.invalidateQueries({ queryKey: postKeys.dashboardStats }),
+    ]);
+  };
+
   const handlePostDecision = async (
     post: CompactPost,
     decision: "accepted" | "rejected",
@@ -119,15 +129,17 @@ export function StaffDashboardView() {
       const notificationTitle = decision === "accepted" ? "Post Accepted" : "Post Rejected";
       const notificationBody =
         decision === "accepted"
-          ? `Your post about "${post.itemName}" has been accepted and is now visible to users.`
-          : `Your post about "${post.itemName}" has been rejected. Reason: ${rejectionReason ?? "No reason provided."}`;
+          ? `Your post about "${post.itemName}" has been accepted and is now visible on the platform.`
+          : `Your post about "${post.itemName}" has been rejected and will not be published on the platform. You can edit and submit again or delete it. Reason: ${rejectionReason ?? "No reason provided."}`;
 
       await sendNotification({
         user_id: post.posterId,
         title: notificationTitle,
         body: notificationBody,
         description:
-          decision === "accepted" ? "Your post is now visible to users." : rejectionReason ?? "No reason provided.",
+          decision === "accepted"
+            ? "Your post is now visible on the platform."
+            : rejectionReason ?? "No reason provided.",
         type: decision === "accepted" ? "accept" : "rejection",
         data: {
           postId: post.postId,
@@ -138,14 +150,12 @@ export function StaffDashboardView() {
         ...(post.imageUrl ? { image_url: post.imageUrl } : {}),
       });
 
-      setDismissedPostIds((current) => [...current, post.postId]);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: postKeys.dashboard({ postStatus: "pending", ...(itemTypeForFetch ? { itemType: itemTypeForFetch } : {}), pageSize: 10 }) }),
-        queryClient.invalidateQueries({ queryKey: postKeys.dashboardStats }),
-      ]);
+      await dismissAndRefreshPost(post.postId);
 
       pushToast(
-        decision === "accepted" ? "Post accepted and owner notified" : "Post rejected and owner notified",
+        decision === "accepted"
+          ? "Post approved and owner notified"
+          : "Post rejected and owner notified",
         decision === "accepted" ? "success" : "danger"
       );
     } catch {
@@ -158,6 +168,11 @@ export function StaffDashboardView() {
   };
 
   const handleAccept = (post: CompactPost) => {
+    if (post.itemType === "lost") {
+      void handleMatchMissingPost(post);
+      return;
+    }
+
     void handlePostDecision(post, "accepted");
   };
 
@@ -177,6 +192,102 @@ export function StaffDashboardView() {
       setPendingRejectPost(null);
       setSelectedRejectReason("");
     });
+  };
+
+  const handleMatchMissingPost = async (post: CompactPost) => {
+    if (isSubmittingDecision) return;
+    if (!post.posterId) {
+      pushToast("Owner is not available for notification", "danger");
+      return;
+    }
+
+    setIsSubmittingDecision(true);
+    setPendingDecisionPostId(post.postId);
+    setPendingDecisionType("accept");
+
+    try {
+      await updatePostStatus(post.postId, { status: "accepted" });
+      await sendNotification({
+        user_id: post.posterId,
+        title: "Great News! A Possible Match to Your Item",
+        body: `We found items that may match your ${post.itemName}. Please proceed to the Security Office during office hours to verify.`,
+        description: "Please proceed to the Security Office during office hours.",
+        type: "match",
+        data: { postId: post.postId, itemId: post.itemId },
+        ...(post.imageUrl ? { image_url: post.imageUrl } : {}),
+      });
+
+      await dismissAndRefreshPost(post.postId);
+      pushToast("Possible match sent to owner", "success");
+    } catch {
+      pushToast("Failed to match missing item", "danger");
+    } finally {
+      setIsSubmittingDecision(false);
+      setPendingDecisionPostId(null);
+      setPendingDecisionType(null);
+    }
+  };
+
+  const handleNotifySimilar = async (post: CompactPost) => {
+    if (isSubmittingDecision) return;
+    if (!post.posterId) {
+      pushToast("Owner is not available for notification", "danger");
+      return;
+    }
+
+    const currentTime = Date.now();
+    const lastNotifyTime = lastNotifyTimeRef.current.get(post.postId) ?? 0;
+    const timeSinceLastNotify = currentTime - lastNotifyTime;
+
+    if (timeSinceLastNotify < 10000) {
+      const remainingSeconds = Math.ceil((10000 - timeSinceLastNotify) / 1000);
+      pushToast(`Please wait ${remainingSeconds} seconds before notifying again`, "danger");
+      return;
+    }
+
+    setIsSubmittingDecision(true);
+    setPendingDecisionPostId(post.postId);
+    setPendingDecisionType("notify");
+
+    try {
+      await sendNotification({
+        user_id: post.posterId,
+        title: "Great News! A Possible Match to Your Item",
+        body: `We found items that may match your ${post.itemName}. Please proceed to the Security Office during office hours to verify.`,
+        description: "Please proceed to the Security Office during office hours.",
+        type: "match",
+        data: { postId: post.postId, itemId: post.itemId },
+        ...(post.imageUrl ? { image_url: post.imageUrl } : {}),
+      });
+      lastNotifyTimeRef.current.set(post.postId, Date.now());
+      pushToast("Owner notified successfully!", "success");
+    } catch {
+      pushToast("Failed to notify owner", "danger");
+    } finally {
+      setIsSubmittingDecision(false);
+      setPendingDecisionPostId(null);
+      setPendingDecisionType(null);
+    }
+  };
+
+  const handleShare = async (post: CompactPost) => {
+    try {
+      const shareResult = await shareLink({
+        title: post.itemName,
+        text: `View the ${post.itemName} post record.`,
+        url: `${window.location.origin}/staff/post-record/view/${post.postId}`,
+      });
+
+      if (shareResult === "copied") {
+        pushToast("Link copied to clipboard", "success");
+      }
+
+      if (shareResult === "shared") {
+        pushToast("Post shared successfully", "success");
+      }
+    } catch {
+      pushToast("Failed to share post", "danger");
+    }
   };
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
@@ -212,6 +323,8 @@ export function StaffDashboardView() {
         hasNextPage={dashboardPostsQuery.hasNextPage}
         onAccept={handleAccept}
         onReject={handleReject}
+        onNotifySimilar={(post) => void handleNotifySimilar(post)}
+        onShare={(post) => void handleShare(post)}
         pendingDecisionPostId={pendingDecisionPostId}
         isSubmittingDecision={isSubmittingDecision}
         pendingDecisionType={pendingDecisionType}

@@ -41,6 +41,26 @@ export default function GoogleLoginButton() {
   const [status, setStatus] = useState<LoginStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
+  const handleButtonClick = () => {
+    if (!clientId) {
+      setStatus("error");
+      setError("Missing `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.");
+      return;
+    }
+
+    const renderedButton = buttonRef.current?.querySelector<HTMLElement>(
+      'div[role="button"], button'
+    );
+
+    if (!renderedButton) {
+      setStatus("error");
+      setError("Google Sign-In is still loading. Please try again.");
+      return;
+    }
+
+    renderedButton.click();
+  };
+
   const handleCredential = useCallback(async (credential?: string) => {
     if (!credential) {
       setStatus("error");
@@ -55,7 +75,9 @@ export default function GoogleLoginButton() {
       const payload = decodeGoogleCredentialPayload(credential);
       const email = typeof payload?.email === "string" ? payload.email.trim().toLowerCase() : null;
       if (!email?.endsWith("@umak.edu.ph")) {
-        throw new Error("Please use your organization email to sign in.");
+        throw new Error(
+          "Sign in failed. Please make sure to use your UMAK Google Account and try again"
+        );
       }
 
       const supabase = getSupabaseClient();
@@ -149,7 +171,15 @@ export default function GoogleLoginButton() {
   return (
     <div className="flex flex-col items-center gap-2">
       <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onLoad={initGoogleButton} />
-      <div ref={buttonRef} />
+      <button
+        type="button"
+        onClick={handleButtonClick}
+        disabled={status === "loading" || !clientId}
+        className="inline-flex min-w-[260px] items-center justify-center rounded-full bg-[#1D2981] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#16206a] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {status === "loading" ? "Signing in..." : "Sign In With UMak Email"}
+      </button>
+      <div ref={buttonRef} className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true" />
       {status === "loading" && (
         <p className="text-xs text-slate-500">Signing you in...</p>
       )}

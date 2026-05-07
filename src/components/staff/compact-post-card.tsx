@@ -30,17 +30,22 @@ export function CompactPostCard({
   post,
   onAccept,
   onReject,
+  onNotifySimilar,
+  onShare,
   actionsDisabled = false,
   loadingAction = null,
 }: {
   post: CompactPost;
   onAccept?: (post: CompactPost) => void;
   onReject?: (post: CompactPost) => void;
+  onNotifySimilar?: (post: CompactPost) => void;
+  onShare?: (post: CompactPost) => void;
   actionsDisabled?: boolean;
-  loadingAction?: "accept" | "reject" | null;
+  loadingAction?: "accept" | "reject" | "notify" | null;
 }) {
   const router = useRouter();
-  const showActions = post.postStatus === "Pending" && (onAccept || onReject);
+  const isMissingItem = post.itemType === "lost";
+  const showActions = post.postStatus === "Pending" && (onAccept || onReject || onNotifySimilar);
 
   const handleCardClick = () => {
     router.push(`/staff/post-record/view/${post.postId}`);
@@ -127,8 +132,31 @@ export function CompactPostCard({
               }}
               className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <CheckCircle2 className="size-4" /> {loadingAction === "accept" ? "Accepting..." : "Accept"}
+              <CheckCircle2 className="size-4" />{" "}
+              {loadingAction === "accept"
+                ? isMissingItem
+                  ? "Matching..."
+                  : "Approving..."
+                : isMissingItem
+                  ? "Match"
+                  : "Approve"}
             </button>
+            {isMissingItem ? (
+              <button
+                type="button"
+                disabled={actionsDisabled}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onNotifySimilar?.(post);
+                }}
+                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <CheckCircle2 className="size-4" />{" "}
+                {loadingAction === "notify"
+                  ? "Notifying..."
+                  : "Send Similar Item Notification"}
+              </button>
+            ) : null}
             <button
               type="button"
               disabled={actionsDisabled}
@@ -144,6 +172,10 @@ export function CompactPostCard({
         ) : null}
         <button
           type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onShare?.(post);
+          }}
           className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
         >
           <Share2 className="size-4" /> Share

@@ -74,7 +74,12 @@ export default function AdminGenerateAnnouncementPage() {
     e.preventDefault();
 
     if (title.trim() === "" && description.trim() === "") {
-      showToast("Title or Description must not be empty", "danger");
+      showToast("Title or Message must not be empty", "danger");
+      return;
+    }
+
+    if (title.trim() === "" || description.trim() === "") {
+      showToast("Please fill in all required fields", "danger");
       return;
     }
 
@@ -106,8 +111,8 @@ export default function AdminGenerateAnnouncementPage() {
       // Create announcement
       await createAnnouncement({
         user_id: user.user_id,
-        message: title || "New Feature Available",
-        description: description || "Check out our latest update with amazing new features!",
+        message: title.trim(),
+        description: description.trim(),
         image_url: imageUrl,
       });
 
@@ -119,9 +124,9 @@ export default function AdminGenerateAnnouncementPage() {
           table_name: "global_announcement_table",
           record_id: user.user_id,
           changes: {
-            title: title || "New Feature Available",
+            title: title.trim(),
             message: `${user.user_name || "Admin"} has sent a global announcement`,
-            description: description || "Check out our latest update with amazing new features!",
+            description: description.trim(),
             timestamp: new Date().toISOString(),
           },
         });
@@ -144,7 +149,7 @@ export default function AdminGenerateAnnouncementPage() {
       // Navigate back after a delay
       setTimeout(() => {
         router.push("/admin/announcement");
-      }, 1500);
+      }, 1000);
     } catch (error) {
       logError("Failed to post announcement:", error);
       showToast("Failed to post announcement. Please try again.", "danger");

@@ -1,16 +1,26 @@
 import axios from "axios";
 import { supabase } from "@/lib/supabase";
-import { getStoredToken } from "@/lib/token-storage";
+
+function resolveApiBaseUrl(): string {
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (configuredBaseUrl) return configuredBaseUrl;
+
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:8080";
+  }
+
+  return "https://localhost:8080";
+}
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
-  timeout: Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 30000),
-  withCredentials: true, // Required for CORS with credentials
+  baseURL: resolveApiBaseUrl(),
+  timeout: Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 8000),
+  withCredentials: true,
 });
 
 api.interceptors.request.use(async (config) => {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null;
-  const token = session?.access_token ?? getStoredToken();
+  const token = session?.access_token ?? null;
 
   if (token) {
     config.headers = config.headers ?? {};

@@ -21,6 +21,7 @@ import Image from "next/image";
 interface NotificationItemProps {
   notification: NotificationData;
   postHrefBase?: string | null;
+  notificationsHref?: string | null;
   onMarkAsRead?: (id: string | number) => void;
   onDelete?: (id: string | number) => void;
 }
@@ -40,26 +41,38 @@ function toStringValue(value: unknown): string | null {
 
 function resolveNotificationHref(
   notification: NotificationData,
-  postHrefBase?: string | null
+  postHrefBase?: string | null,
+  notificationsHref?: string | null
 ): string | null {
+  if (notification.type === "global_announcement" || notification.type === "announcement") {
+    return null;
+  }
+
   const explicitHref =
     toStringValue(notification.data?.url) ??
     toStringValue(notification.data?.href) ??
     toStringValue(notification.data?.link);
-  const postId = toStringValue(notification.data?.postId);
+  const postId =
+    toStringValue(notification.data?.postId) ??
+    toStringValue(notification.data?.post_id);
 
-  if (
-    explicitHref &&
-    !(postHrefBase && postId && explicitHref.startsWith("/user/"))
-  ) {
+  if (explicitHref && !explicitHref.startsWith("/user/")) {
     return explicitHref;
+  }
+
+  if (explicitHref?.startsWith("/user/post/view/") && postHrefBase && postId) {
+    return `${postHrefBase}/${postId}`;
+  }
+
+  if (explicitHref?.startsWith("/user/") && notificationsHref) {
+    return notificationsHref;
   }
 
   if (postHrefBase && postId) {
     return `${postHrefBase}/${postId}`;
   }
 
-  return explicitHref;
+  return explicitHref ?? notificationsHref ?? null;
 }
 
 function iconForType(type: NotificationType | string) {
@@ -80,6 +93,7 @@ function iconForType(type: NotificationType | string) {
       return { icon: XCircle, colorClass: "text-red-600" };
     case "post_accepted":
       return { icon: CheckCheck, colorClass: "text-green-600" };
+    case "announcement":
     case "global_announcement":
       return { icon: Megaphone, colorClass: "text-red-600" };
     case "progress":
@@ -94,6 +108,7 @@ function iconForType(type: NotificationType | string) {
 export function NotificationItem({
   notification,
   postHrefBase = null,
+  notificationsHref = null,
   onMarkAsRead,
   onDelete,
 }: NotificationItemProps) {
@@ -105,7 +120,7 @@ export function NotificationItem({
   const isRead = notification.is_read ?? false;
 
   const handleClick = () => {
-    const href = resolveNotificationHref(notification, postHrefBase);
+    const href = resolveNotificationHref(notification, postHrefBase, notificationsHref);
 
     if (href) {
       if (!isRead && onMarkAsRead) {

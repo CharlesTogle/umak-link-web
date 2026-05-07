@@ -13,6 +13,26 @@ export interface DashboardToast {
   tone: CustomToastTone;
 }
 
+interface DashboardFeedProps {
+  feedRef: React.RefObject<HTMLDivElement | null>;
+  onScroll: (event: React.UIEvent<HTMLDivElement>) => void;
+  selectedType: "lost" | "found" | "all";
+  isRefreshing: boolean;
+  onRefresh: () => void;
+  toasts: DashboardToast[];
+  errorMessage: string | null;
+  isInitialLoading: boolean;
+  filteredPosts: CompactPost[];
+  hasNextPage?: boolean;
+  onAccept: (post: CompactPost) => void;
+  onReject: (post: CompactPost) => void;
+  onNotifySimilar: (post: CompactPost) => void;
+  onShare: (post: CompactPost) => void;
+  pendingDecisionPostId: string | null;
+  isSubmittingDecision: boolean;
+  pendingDecisionType: "accept" | "reject" | "notify" | null;
+}
+
 export function DashboardFeed({
   feedRef,
   onScroll,
@@ -31,25 +51,7 @@ export function DashboardFeed({
   pendingDecisionPostId,
   isSubmittingDecision,
   pendingDecisionType,
-}: {
-  feedRef: React.RefObject<HTMLDivElement | null>;
-  onScroll: (event: React.UIEvent<HTMLDivElement>) => void;
-  selectedType: "lost" | "found" | "all";
-  isRefreshing: boolean;
-  onRefresh: () => void;
-  toasts: DashboardToast[];
-  errorMessage: string | null;
-  isInitialLoading: boolean;
-  filteredPosts: CompactPost[];
-  hasNextPage?: boolean;
-  onAccept: (post: CompactPost) => void;
-  onReject: (post: CompactPost) => void;
-  onNotifySimilar: (post: CompactPost) => void;
-  onShare: (post: CompactPost) => void;
-  pendingDecisionPostId: string | null;
-  isSubmittingDecision: boolean;
-  pendingDecisionType: "accept" | "reject" | "notify" | null;
-}) {
+}: DashboardFeedProps) {
   return (
     <div ref={feedRef} onScroll={onScroll} className="min-h-0 space-y-4 overflow-y-auto pr-1 lg:col-span-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -103,15 +105,17 @@ export function DashboardFeed({
   );
 }
 
+interface DashboardSidebarProps {
+  stats: { pendingClaims: number; fraudReports: number; unreadAlerts: number };
+  selectedType: "lost" | "found" | "all";
+  onNavigate: (path: string) => void;
+}
+
 export function DashboardSidebar({
   stats,
   selectedType,
   onNavigate,
-}: {
-  stats: { pendingClaims: number; fraudReports: number; unreadAlerts: number };
-  selectedType: "lost" | "found" | "all";
-  onNavigate: (path: string) => void;
-}) {
+}: DashboardSidebarProps) {
   return (
     <aside className="min-h-0 space-y-3 overflow-y-auto pr-1 lg:col-span-4">
       <StaffStatCard title="Pending Claims" value={stats.pendingClaims} onClick={() => onNavigate("/staff/post-records")} />
@@ -138,6 +142,16 @@ export function DashboardSidebar({
   );
 }
 
+interface DashboardRejectModalProps {
+  isOpen: boolean;
+  rejectReasons: readonly string[];
+  selectedRejectReason: string;
+  isSubmittingDecision: boolean;
+  onSelectReason: (reason: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
 export function DashboardRejectModal({
   isOpen,
   rejectReasons,
@@ -146,15 +160,7 @@ export function DashboardRejectModal({
   onSelectReason,
   onCancel,
   onConfirm,
-}: {
-  isOpen: boolean;
-  rejectReasons: readonly string[];
-  selectedRejectReason: string;
-  isSubmittingDecision: boolean;
-  onSelectReason: (reason: string) => void;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
+}: DashboardRejectModalProps) {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">

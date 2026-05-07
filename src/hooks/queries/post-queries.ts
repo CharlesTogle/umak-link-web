@@ -43,10 +43,13 @@ export const postKeys = {
   lostItem: (itemId: string) => ["posts", "lost-item", itemId] as const,
 };
 
-function getNextOffset<T>(pages: T[][], pageSize: number): number | undefined {
+function getNextExcludedPostIds<T extends { postId: string }>(
+  pages: T[][],
+  pageSize: number
+): string[] | undefined {
   const lastPage = pages[pages.length - 1];
   if (!lastPage || lastPage.length < pageSize) return undefined;
-  return pages.length * pageSize;
+  return pages.flat().map((page) => page.postId);
 }
 
 export function useDashboardPosts(params: DashboardPostsParams) {
@@ -54,20 +57,21 @@ export function useDashboardPosts(params: DashboardPostsParams) {
 
   return useInfiniteQuery({
     queryKey: postKeys.dashboard({ ...params, pageSize }),
-    initialPageParam: 0,
+    initialPageParam: [] as string[],
     queryFn: async ({ pageParam }) => {
       const response = await listPosts({
         ...(params.itemType ? { item_type: params.itemType } : {}),
         ...(params.postStatus ? { status: params.postStatus } : {}),
+        ...(pageParam.length > 0 ? { exclude_ids: pageParam } : {}),
         limit: pageSize,
-        offset: pageParam,
         order_by: "submission_date",
         order_direction: "desc",
       });
 
       return response.posts.map(mapPostToCompact);
     },
-    getNextPageParam: (_lastPage, allPages) => getNextOffset(allPages, pageSize),
+    getNextPageParam: (_lastPage, allPages) =>
+      getNextExcludedPostIds(allPages, pageSize),
   });
 }
 
@@ -96,21 +100,22 @@ export function usePostRecords(params: PostRecordsParams) {
 
   return useInfiniteQuery({
     queryKey: postKeys.records({ ...params, pageSize }),
-    initialPageParam: 0,
+    initialPageParam: [] as string[],
     queryFn: async ({ pageParam }) => {
       const response = await listPosts({
         ...(params.itemType ? { item_type: params.itemType } : {}),
         ...(params.postStatus ? { status: params.postStatus } : {}),
         ...(params.itemStatus ? { item_status: params.itemStatus } : {}),
+        ...(pageParam.length > 0 ? { exclude_ids: pageParam } : {}),
         limit: pageSize,
-        offset: pageParam,
         order_by: "submission_date",
         order_direction: params.sortDirection ?? "desc",
       });
 
       return response.posts.map(mapPostToRecord);
     },
-    getNextPageParam: (_lastPage, allPages) => getNextOffset(allPages, pageSize),
+    getNextPageParam: (_lastPage, allPages) =>
+      getNextExcludedPostIds(allPages, pageSize),
   });
 }
 

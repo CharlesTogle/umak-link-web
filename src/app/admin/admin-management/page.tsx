@@ -7,7 +7,6 @@ import { CustomToast } from "@/components/ui/custom-toast";
 import { UserCircle2, Trash2, ShieldCheck, Users, Download, CheckSquare, Square, MoreVertical, Pencil, ChevronLeft, ChevronRight, Calendar, Clock, Search, Filter, ArrowUpDown } from "lucide-react";
 import type { PortalUserType } from "@/types/auth";
 import { fetchUsers, updateUserRole, searchUsers as searchUsersAPI } from "@/services/admin-service";
-import { insertAuditLog } from "@/services/audit-logs-service";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { logError } from "@/lib/error-utils";
@@ -470,21 +469,6 @@ export default function AdminManagementPage() {
       // Update user role to "User"
       await updateUserRole(userToRemove.user_id, "User", userToRemove.user_type);
 
-      // Insert audit log
-      await insertAuditLog({
-        user_id: currentUser.user_id,
-        action: "role_updated",
-        table_name: "user_table",
-        record_id: userToRemove.user_id,
-        changes: {
-          message: `${currentUser.user_name || "Admin"} removed ${userToRemove.user_name || "user"} from ${userToRemove.user_type} role`,
-          target_user_id: userToRemove.user_id,
-          target_user_email: userToRemove.email,
-          old_role: userToRemove.user_type,
-          new_role: "User",
-        },
-      });
-
       // Update local state
       if (userToRemove.user_type === "Admin") {
         setAdmins((prev) => prev.filter((u) => u.user_id !== userToRemove.user_id));
@@ -527,21 +511,6 @@ export default function AdminManagementPage() {
     try {
       // Update user role
       await updateUserRole(userToEdit.user_id, newRole, userToEdit.user_type);
-
-      // Insert audit log
-      await insertAuditLog({
-        user_id: currentUser.user_id,
-        action: "role_updated",
-        table_name: "user_table",
-        record_id: userToEdit.user_id,
-        changes: {
-          message: `${currentUser.user_name || "Admin"} changed ${userToEdit.user_name || "user"}'s role from ${userToEdit.user_type} to ${newRole}`,
-          target_user_id: userToEdit.user_id,
-          target_user_email: userToEdit.email,
-          old_role: userToEdit.user_type,
-          new_role: newRole,
-        },
-      });
 
       // Update local state
       const updatedUser = { ...userToEdit, user_type: newRole };
@@ -635,20 +604,6 @@ export default function AdminManagementPage() {
       for (const user of selectedUsers) {
         try {
           await updateUserRole(user.user_id, "User", user.user_type);
-
-          await insertAuditLog({
-            user_id: currentUser.user_id,
-            action: "role_updated",
-            table_name: "user_table",
-            record_id: user.user_id,
-            changes: {
-              message: `${currentUser.user_name || "Admin"} removed ${user.user_name || "user"} from ${user.user_type} role (batch operation)`,
-              target_user_id: user.user_id,
-              target_user_email: user.email,
-              old_role: user.user_type,
-              new_role: "User",
-            },
-          });
 
           successCount++;
         } catch (error) {

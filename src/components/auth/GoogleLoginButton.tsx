@@ -4,6 +4,7 @@ import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getRoleHomePathFromUserType } from "@/lib/role-routing";
+import { getRemainingLoginCooldownMs, registerLoginAttempt } from "@/lib/login-rate-limit";
 import { getSupabaseClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
 import { fetchCurrentUser } from "@/services/auth-service";
@@ -58,6 +59,18 @@ export default function GoogleLoginButton() {
       return;
     }
 
+    const remainingCooldownMs = getRemainingLoginCooldownMs();
+    if (remainingCooldownMs > 0) {
+      const remainingSeconds = Math.ceil(remainingCooldownMs / 1000);
+      setStatus("error");
+      setError(
+        `Please wait ${remainingSeconds} second${remainingSeconds === 1 ? "" : "s"} before trying again.`
+      );
+      return;
+    }
+
+    registerLoginAttempt();
+    setError(null);
     renderedButton.click();
   };
 

@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCheck, MoreVertical, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { CheckCheck, MoreVertical, RefreshCcw, Trash2 } from "lucide-react";
 import { NotificationItem } from "@/components/staff/notification-item";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { logError } from "@/lib/error-utils";
+import {
+  getRoleNotificationPostPathBaseFromUserType,
+  getRoleNotificationsPathFromUserType,
+} from "@/lib/role-routing";
 import {
   deleteNotification,
   fetchNotifications,
@@ -23,27 +27,40 @@ export function PortalNotificationsView({
   const { user, isLoading: userLoading } = useCurrentUser();
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
 
   const userId = user?.user_id;
+  const notificationsHref = getRoleNotificationsPathFromUserType(user?.user_type) ?? null;
+  const resolvedPostHrefBase =
+    postHrefBase ?? getRoleNotificationPostPathBaseFromUserType(user?.user_type);
 
-  useEffect(() => {
-    if (!userLoading && userId) {
-      void loadNotifications();
-    }
-  }, [userId, userLoading]);
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async (mode: "initial" | "refresh" = "initial") => {
     try {
-      setLoading(true);
+      if (mode === "refresh") {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
       const data = await fetchNotifications();
       setNotifications(data);
     } catch (error) {
       logError("Failed to fetch notifications:", error);
     } finally {
-      setLoading(false);
+      if (mode === "refresh") {
+        setIsRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!userLoading && userId) {
+      void loadNotifications();
+    }
+  }, [loadNotifications, userId, userLoading]);
 
   const handleMarkAsRead = async (id: string | number) => {
     try {
@@ -102,10 +119,13 @@ export function PortalNotificationsView({
   };
 
   const sortedNotifications = [...notifications].sort((first, second) => {
-    if (first.type === "global_announcement" && second.type !== "global_announcement") {
+    const firstIsAnnouncement = first.type === "global_announcement" || first.type === "announcement";
+    const secondIsAnnouncement = second.type === "global_announcement" || second.type === "announcement";
+
+    if (firstIsAnnouncement && !secondIsAnnouncement) {
       return -1;
     }
-    if (first.type !== "global_announcement" && second.type === "global_announcement") {
+    if (!firstIsAnnouncement && secondIsAnnouncement) {
       return 1;
     }
     return 0;
@@ -121,6 +141,17 @@ export function PortalNotificationsView({
             {notifications.length === 1 ? "notification" : "notifications"}
           </p>
         </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => void loadNotifications("refresh")}
+            aria-label="Refresh notifications"
+            className="text-slate-700 hover:bg-slate-100"
+          >
+            <RefreshCcw className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          </Button>
 
         {notifications.length > 0 ? (
           <div className="relative">
@@ -161,6 +192,7 @@ export function PortalNotificationsView({
             ) : null}
           </div>
         ) : null}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -205,7 +237,8 @@ export function PortalNotificationsView({
                   sent_by: notification.sent_by,
                   image_url: notification.image_url,
                 }}
-                postHrefBase={postHrefBase}
+                postHrefBase={resolvedPostHrefBase}
+                notificationsHref={notificationsHref}
                 onMarkAsRead={handleMarkAsRead}
                 onDelete={handleDelete}
               />

@@ -5,11 +5,11 @@ function resolveApiBaseUrl(): string {
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (configuredBaseUrl) return configuredBaseUrl;
 
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV !== "production") {
     return "http://localhost:8080";
   }
 
-  return "https://localhost:8080";
+  throw new Error("NEXT_PUBLIC_API_URL must be set in production");
 }
 
 export const api = axios.create({

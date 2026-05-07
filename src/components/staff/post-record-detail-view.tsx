@@ -6,6 +6,17 @@ import { PhotoProvider } from "react-photo-view";
 import { POST_REJECTION_REASONS } from "@/config/constants";
 import { useLinkedPost, usePostDetail } from "@/hooks/queries/post-queries";
 import { normalizeValue, toDisplayLabel } from "@/lib/format-utils";
+import {
+  getPostRecordStatusChangeDecision,
+  getPostRecordItemStatusOptions,
+  isPostRecordItemStatusAllowed,
+  isPostRecordPostStatusAllowed,
+  POST_RECORD_POST_STATUS_OPTIONS,
+  resolvePostRecordSelectedItemStatus,
+  resolvePostRecordSelectedStatus,
+  togglePostRecordItemStatusSelection,
+  togglePostRecordStatusSelection,
+} from "@/lib/post-record-status-rules";
 import { shareLink } from "@/lib/share-link";
 import { deleteClaimByItem } from "@/services/claims-service";
 import { sendNotification } from "@/services/notifications-service";
@@ -22,8 +33,6 @@ import { postRecordDetailUiReducer } from "@/components/staff/post-record-detail
 import type { ApiItemStatus, ApiPostStatus } from "@/types/post-record-api";
 import type { LinkedPostRecord, ToastTone } from "@/types/ui";
 
-const POST_STATUS_OPTIONS: ApiPostStatus[] = ["pending", "accepted", "rejected"];
-
 function getStatusColor(status: string): string {
   const normalized = normalizeValue(status);
   if (normalized === "accepted") return "text-emerald-600";
@@ -36,24 +45,6 @@ function getStatusChipClass(active: boolean, disabled = false): string {
   if (active) return "border-[#1D2981] bg-[#1D2981] text-white";
   if (disabled) return "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400";
   return "border-slate-200 bg-white text-slate-700 hover:bg-slate-50";
-}
-
-function getItemStatusOptions(itemType: string | undefined): ApiItemStatus[] {
-  return itemType === "found" ? ["claimed", "unclaimed", "discarded"] : ["returned", "lost"];
-}
-
-function isItemStatusAllowed(itemStatus: ApiItemStatus, selectedPostStatus: ApiPostStatus | null): boolean {
-  if (!selectedPostStatus) return true;
-  if (selectedPostStatus === "pending") return itemStatus === "unclaimed";
-  if (selectedPostStatus === "rejected") return itemStatus === "unclaimed" || itemStatus === "discarded";
-  return true;
-}
-
-function isPostStatusAllowed(postStatus: ApiPostStatus, selectedItemStatus: ApiItemStatus | null): boolean {
-  if (!selectedItemStatus) return true;
-  if (selectedItemStatus === "claimed" || selectedItemStatus === "returned") return postStatus === "accepted";
-  if (selectedItemStatus === "discarded") return postStatus === "accepted" || postStatus === "rejected";
-  return true;
 }
 
 function getLinkedOwnerName(linkedPost: LinkedPostRecord): string {
@@ -206,8 +197,8 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
   const canNotifyOwner = record && normalizeValue(record.item_type) === "missing" && normalizedItemStatus === "lost";
   const canClaimItem =
     record && normalizeValue(record.item_type) === "found" && normalizedItemStatus === "unclaimed" && normalizedPostStatus === "accepted";
-  const selectedStatus = ui.selectedStatus ?? normalizedPostStatus;
-  const selectedItemStatus = ui.selectedItemStatus ?? normalizedItemStatus;
+  const selectedStatus = resolvePostRecordSelectedStatus(normalizedPostStatus, ui.selectedStatus);
+  const selectedItemStatus = resolvePostRecordSelectedItemStatus(normalizedItemStatus, ui.selectedItemStatus);
 
   const performStatusChange = useCallback(async () => {
     if (!record || ui.isSubmitting) return;
@@ -253,21 +244,34 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
 
   const handleApplyStatusChange = async () => {
     if (!record) return;
-    if (!ui.selectedStatus && !ui.selectedItemStatus) return setToast("Please select at least one status", "danger");
-    if (ui.selectedItemStatus === "claimed" && normalizedItemStatus !== "claimed") {
+    const decision = getPostRecordStatusChangeDecision({
+      currentItemStatus: normalizedItemStatus,
+      selectedPostStatus: ui.selectedStatus,
+      selectedItemStatus: ui.selectedItemStatus,
+    });
+
+    if (decision.type === "missing_selection") {
+      setToast("Please select at least one status", "danger");
+      return;
+    }
+
+    if (decision.type === "claim") {
       router.push(`/staff/post/claim/${record.post_id}`);
       return;
     }
-    if (ui.selectedStatus === "rejected") {
+
+    if (decision.type === "reject") {
       dispatchUi({ type: "set_modal", modal: "showStatusModal", value: false });
       dispatchUi({ type: "set_modal", modal: "showRejectModal", value: true });
       return;
     }
-    if (normalizedItemStatus === "claimed" && ui.selectedItemStatus && ui.selectedItemStatus !== "claimed") {
+
+    if (decision.type === "confirm_unclaim") {
       dispatchUi({ type: "set_modal", modal: "showStatusModal", value: false });
       dispatchUi({ type: "set_modal", modal: "showUnclaimModal", value: true });
       return;
     }
+
     await performStatusChange();
   };
 
@@ -392,22 +396,22 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
           selectedStatus={selectedStatus}
           selectedItemStatus={selectedItemStatus}
           postItemType={record.item_type}
-          postStatusOptions={POST_STATUS_OPTIONS}
+          postStatusOptions={POST_RECORD_POST_STATUS_OPTIONS}
           rejectReasons={POST_REJECTION_REASONS}
           getStatusChipClass={getStatusChipClass}
-          isPostStatusAllowed={isPostStatusAllowed}
-          isItemStatusAllowed={isItemStatusAllowed}
-          getItemStatusOptions={getItemStatusOptions}
+          isPostStatusAllowed={isPostRecordPostStatusAllowed}
+          isItemStatusAllowed={isPostRecordItemStatusAllowed}
+          getItemStatusOptions={getPostRecordItemStatusOptions}
           onSelectStatus={(value) =>
             dispatchUi({
               type: "set_selected_status",
-              value: value === normalizedPostStatus ? null : value,
+              value: togglePostRecordStatusSelection(normalizedPostStatus, value),
             })
           }
           onSelectItemStatus={(value) =>
             dispatchUi({
               type: "set_selected_item_status",
-              value: value === normalizedItemStatus ? null : value,
+              value: togglePostRecordItemStatusSelection(normalizedItemStatus, value),
             })
           }
           onCancelStatus={() => {

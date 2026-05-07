@@ -7,6 +7,14 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
   return response.data.user;
 }
 
+export async function syncProfilePictureFromGoogle(googleIdToken: string): Promise<AuthUser | null> {
+  const response = await api.post<{ user?: AuthUser }>("/auth/update-picture-from-google", {
+    googleIdToken,
+  });
+
+  return response.data.user ?? null;
+}
+
 export function isUnauthorizedError(error: unknown): boolean {
   return isAxiosError(error) && error.response?.status === 401;
 }

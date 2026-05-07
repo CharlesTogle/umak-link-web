@@ -7,7 +7,7 @@ import { getRoleHomePathFromUserType } from "@/lib/role-routing";
 import { getRemainingLoginCooldownMs, registerLoginAttempt } from "@/lib/login-rate-limit";
 import { getSupabaseClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
-import { fetchCurrentUser } from "@/services/auth-service";
+import { fetchCurrentUser, syncProfilePictureFromGoogle } from "@/services/auth-service";
 import type { AuthUser } from "@/types/auth";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
@@ -103,7 +103,15 @@ export default function GoogleLoginButton() {
         throw signInError;
       }
 
-      const currentUser = (await fetchCurrentUser()) as AuthUser | undefined;
+      let currentUser: AuthUser | null = null;
+
+      try {
+        currentUser = await syncProfilePictureFromGoogle(credential);
+      } catch {
+        currentUser = null;
+      }
+
+      currentUser ??= await fetchCurrentUser();
       const nextPath = getRoleHomePathFromUserType(currentUser?.user_type);
 
       if (!currentUser || !nextPath) {

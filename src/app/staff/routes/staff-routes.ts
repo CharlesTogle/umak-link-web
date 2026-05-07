@@ -39,9 +39,9 @@ export const staffPrimaryRoutes: StaffRouteGroup[] = [
     icon: FileText,
     children: [
       { label: "All Records", href: buildPostRecordsSidebarHref("all") },
-      { label: "Pending", href: buildPostRecordsSidebarHref("pending") },
       { label: "Claimed", href: buildPostRecordsSidebarHref("claimed") },
-      { label: "Archived", href: buildPostRecordsSidebarHref("archived") },
+      { label: "Unclaimed", href: buildPostRecordsSidebarHref("unclaimed") },
+      { label: "Lost", href: buildPostRecordsSidebarHref("lost") },
     ],
   },
   { label: "Fraud Reports", href: "/staff/fraud-reports", icon: ShieldAlert },

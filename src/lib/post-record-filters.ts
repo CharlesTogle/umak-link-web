@@ -4,7 +4,13 @@ type SearchParamsReader = {
   get: (key: string) => string | null;
 };
 
-export type PostRecordsSidebarFilter = "all" | "pending" | "claimed" | "archived";
+export type PostRecordsSidebarFilter =
+  | "all"
+  | "claimed"
+  | "unclaimed"
+  | "lost"
+  | "pending"
+  | "archived";
 
 export const DEFAULT_POST_RECORD_FILTERS: PostRecordFilters = {
   postStatus: "all",
@@ -79,6 +85,10 @@ function getLegacySidebarFilters(filter: string | null): Partial<PostRecordFilte
       return { postStatus: "Pending" };
     case "claimed":
       return { itemStatus: "Claimed" };
+    case "unclaimed":
+      return { itemStatus: "Unclaimed" };
+    case "lost":
+      return { itemStatus: "Lost" };
     case "archived":
       return { postStatus: "Archived" };
     default:
@@ -116,10 +126,14 @@ export function buildPostRecordsUrl(filters: Partial<PostRecordFilters> = {}): s
 
 export function buildPostRecordsSidebarHref(filter: PostRecordsSidebarFilter): string {
   switch (filter) {
-    case "pending":
-      return buildPostRecordsUrl({ postStatus: "Pending" });
     case "claimed":
       return buildPostRecordsUrl({ itemStatus: "Claimed" });
+    case "unclaimed":
+      return buildPostRecordsUrl({ itemStatus: "Unclaimed" });
+    case "lost":
+      return buildPostRecordsUrl({ itemStatus: "Lost" });
+    case "pending":
+      return buildPostRecordsUrl({ postStatus: "Pending" });
     case "archived":
       return buildPostRecordsUrl({ postStatus: "Archived" });
     default:

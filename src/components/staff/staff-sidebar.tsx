@@ -4,11 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Bell, ChevronDown, CircleHelp, LogOut, UserCircle2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { staffPrimaryRoutes, staffSecondaryRoutes } from "@/app/staff/routes/staff-routes";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useUnreadNotificationsCount } from "@/hooks/queries/notification-queries";
+import { getPostRecordFiltersFromSearchParams } from "@/lib/post-record-filters";
 import { useAuthStore } from "@/stores/auth-store";
-import { fetchUnreadNotificationsCount } from "@/services/notifications-service";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/staff") return pathname === "/staff";
@@ -21,6 +22,19 @@ function isChildActive(pathname: string, searchParams: URLSearchParams, childHre
   const childSearchParams = url.searchParams;
 
   if (pathname !== childPath) return false;
+
+  if (childPath === "/staff/post-records") {
+    const currentFilters = getPostRecordFiltersFromSearchParams(searchParams);
+    const childFilters = getPostRecordFiltersFromSearchParams(childSearchParams);
+
+    return currentFilters.postStatus === childFilters.postStatus &&
+      currentFilters.itemStatus === childFilters.itemStatus &&
+      currentFilters.itemType === childFilters.itemType;
+  }
+
+  if (Array.from(childSearchParams.keys()).length === 0) {
+    return searchParams.toString().length === 0;
+  }
 
   for (const [key, value] of childSearchParams.entries()) {
     if (searchParams.get(key) !== value) return false;
@@ -41,32 +55,9 @@ export function StaffSidebar() {
     Dashboard: true,
     "Post Records": true,
   });
-
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [countLoading, setCountLoading] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const loadCount = async () => {
-      try {
-        setCountLoading(true);
-        const data = await fetchUnreadNotificationsCount();
-        setUnreadCount(data.unread_count);
-      } catch (error) {
-        console.error("Failed to fetch unread count:", error);
-      } finally {
-        setCountLoading(false);
-      }
-    };
-
-    loadCount();
-
-    // Poll for updates every 30 seconds
-    const interval = setInterval(loadCount, 30000);
-
-    return () => clearInterval(interval);
-  }, [user]);
+  const unreadCountQuery = useUnreadNotificationsCount(Boolean(user));
+  const unreadCount = unreadCountQuery.data?.unread_count ?? 0;
+  const countLoading = unreadCountQuery.isLoading;
 
   const defaultGroupState = useMemo(
     () =>

@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/index';
 import { APP_ROUTES } from '../../config/routes';
-import { createMockPost, TEST_CONSTANTS } from '../../helpers/test-data';
+import { createMockPost } from '../../helpers/test-data';
 
 test.describe('Staff Post Management', () => {
   test('post records list page loads', async ({
@@ -188,6 +188,46 @@ test.describe('Staff Post Management', () => {
     const allButtons = page.locator('button:has-text("All")');
     const hasStatusFilter = await allButtons.count().then((n) => n > 0);
     expect(hasStatusFilter).toBeTruthy();
+  });
+
+  test('sidebar claimed preset requests claimed records', async ({
+    page,
+    staffUser,
+    setAuthToken,
+  }) => {
+    await setAuthToken(staffUser);
+
+    await page.route('**/posts**', (route) => {
+      if (route.request().method() === 'GET') {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ posts: [] }),
+        });
+      } else {
+        route.continue();
+      }
+    });
+
+    await page.goto(APP_ROUTES.staff.posts);
+    await page.waitForLoadState('networkidle');
+
+    const claimedRequestPromise = page.waitForRequest((request) => {
+      if (request.method() !== 'GET' || !request.url().includes('/posts')) {
+        return false;
+      }
+
+      const url = new URL(request.url());
+      return url.searchParams.get('item_status') === 'claimed';
+    });
+
+    await page.getByRole('link', { name: 'Claimed' }).click();
+
+    const claimedRequest = await claimedRequestPromise;
+    const claimedUrl = new URL(claimedRequest.url());
+
+    expect(claimedUrl.searchParams.get('item_status')).toBe('claimed');
+    await expect(page).toHaveURL(/\/staff\/post-records\?itemStatus=Claimed$/);
   });
 
   test('post list has search/filter input', async ({

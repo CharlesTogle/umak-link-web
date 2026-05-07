@@ -6,21 +6,22 @@ import {
   Search,
   PlusSquare,
 } from "lucide-react";
+import { buildPostRecordsSidebarHref } from "@/lib/post-record-filters";
 
-export type StaffRouteItem = {
+export interface StaffRouteItem {
   label: string;
   href: string;
   icon: LucideIcon;
-};
+}
 
-export type StaffGroupItem = {
+export interface StaffGroupItem {
   label: string;
   href: string;
-};
+}
 
-export type StaffRouteGroup = StaffRouteItem & {
+export interface StaffRouteGroup extends StaffRouteItem {
   children?: StaffGroupItem[];
-};
+}
 
 export const staffPrimaryRoutes: StaffRouteGroup[] = [
   {
@@ -37,10 +38,10 @@ export const staffPrimaryRoutes: StaffRouteGroup[] = [
     href: "/staff/post-records",
     icon: FileText,
     children: [
-      { label: "All Records", href: "/staff/post-records?filter=all" },
-      { label: "Pending", href: "/staff/post-records?filter=pending" },
-      { label: "Claimed", href: "/staff/post-records?filter=claimed" },
-      { label: "Archived", href: "/staff/post-records?filter=archived" },
+      { label: "All Records", href: buildPostRecordsSidebarHref("all") },
+      { label: "Pending", href: buildPostRecordsSidebarHref("pending") },
+      { label: "Claimed", href: buildPostRecordsSidebarHref("claimed") },
+      { label: "Archived", href: buildPostRecordsSidebarHref("archived") },
     ],
   },
   { label: "Fraud Reports", href: "/staff/fraud-reports", icon: ShieldAlert },

@@ -4,27 +4,13 @@ import Image from "next/image";
 import { ArrowLeft, Check, CircleUserRound, Clock, Mail, Phone, Search, User, X } from "lucide-react";
 import { PhotoView } from "react-photo-view";
 import { Overlay } from "@/components/ui/overlay";
+import type {
+  ClaimFormData,
+  SelectedUser,
+  UserSearchResult,
+} from "@/components/staff/staff-claim-post-view-state";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
-
-interface SelectedUser {
-  user_id: string;
-  user_name: string;
-  email: string;
-  profile_picture_url?: string | null;
-}
-
-interface UserSearchResult {
-  out_user_id: string;
-  out_user_name: string;
-  out_email: string;
-  out_profile_picture_url?: string | null;
-}
-
-interface ClaimFormData {
-  contactNumber: string;
-  lostItemId: string;
-  claimedAt: string;
-}
+import type { ApiPostRecordDetails } from "@/types/post-record-api";
 
 export function ClaimToolbar(props: {
   isFormValid: boolean;
@@ -55,7 +41,10 @@ export function ClaimToolbar(props: {
   );
 }
 
-export function FoundItemPanel(props: { post: any; lostItemPost: any | null }) {
+export function FoundItemPanel(props: {
+  post: ApiPostRecordDetails;
+  lostItemPost: ApiPostRecordDetails | null;
+}) {
   const { post, lostItemPost } = props;
   return (
     <article className="min-h-0 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-7">

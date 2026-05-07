@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import { PhotoProvider } from "react-photo-view";
-import { api } from "@/lib/api";
+import { useProcessClaimMutation } from "@/hooks/mutations/claim-mutations";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useLostItemLookup, usePostDetail } from "@/hooks/queries/post-queries";
@@ -28,13 +28,13 @@ import {
 export function StaffClaimPostView({ postId }: { postId: string }) {
   const router = useRouter();
   const { user: currentUser } = useCurrentUser();
+  const claimMutation = useProcessClaimMutation();
   const [formData, dispatchForm] = useReducer(formReducer, {
     contactNumber: "",
     lostItemId: "",
     claimedAt: new Date().toISOString().slice(0, 16),
   });
   const [ui, dispatchUi] = useReducer(uiReducer, {
-    isSubmitting: false,
     toast: null,
     searchQuery: "",
     selectedUser: null,
@@ -56,6 +56,7 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
   const isSearching = userSearchQuery.isFetching;
   const isLoadingLostItem = lostItemQuery.isFetching;
   const lostItemError = lostItemQuery.error instanceof Error ? lostItemQuery.error.message : null;
+  const isSubmitting = claimMutation.isPending;
 
   const hasUnsavedChanges = useMemo(
     () => ui.selectedUser !== null || formData.contactNumber !== "" || formData.lostItemId !== "",
@@ -122,6 +123,7 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
 
   const handleSubmit = async () => {
     dispatchUi({ type: "set_modal", modal: "showConfirmModal", value: false });
+    if (isSubmitting) return;
     if (!post || !ui.selectedUser) return showToast("Missing required information", "danger");
 
     const normalized = normalizePhoneNumber(formData.contactNumber);
@@ -132,33 +134,30 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
       return showToast("Referenced lost item not found. Please verify the Item ID.", "danger");
     }
 
-    dispatchUi({ type: "set_submitting", value: true });
-    try {
-      if (!currentUser?.user_id) {
-        showToast("Authentication required", "danger");
-        return;
-      }
+    if (!currentUser?.user_id) {
+      showToast("Authentication required", "danger");
+      return;
+    }
 
-      await api.post("/claims/process", {
+    try {
+      await claimMutation.mutateAsync({
         found_post_id: Number(postId),
         missing_post_id: lostItemPost ? Number(lostItemPost.post_id) : null,
         claim_details: {
           claimer_name: ui.selectedUser.user_name,
           claimer_school_email: ui.selectedUser.email,
           claimer_contact_num: formatPhoneNumber(normalized),
-          poster_name: post.is_anonymous ? "Anonymous" : post.poster_name,
+          poster_name: post.is_anonymous ? "Anonymous" : post.poster_name ?? "Unknown User",
           staff_id: currentUser.user_id,
           staff_name: currentUser.user_name ?? "Staff User",
         },
       });
 
       showToast("Item claimed successfully", "success");
-      setTimeout(() => router.push("/staff/post-records"), 1500);
+      window.setTimeout(() => router.push("/staff/post-records"), 1500);
     } catch (err) {
       logError("Claim submission error:", err);
-      showToast("Failed to claim item. Please try again.", "danger");
-    } finally {
-      dispatchUi({ type: "set_submitting", value: false });
+      showToast(err instanceof Error ? err.message : "Failed to claim item. Please try again.", "danger");
     }
   };
 
@@ -181,7 +180,7 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
       <section className="flex h-full min-h-0 flex-col gap-4 overflow-hidden pr-1">
         <ClaimToolbar
           isFormValid={isFormValid}
-          isSubmitting={ui.isSubmitting}
+          isSubmitting={isSubmitting}
           onBack={() => {
             if (hasUnsavedChanges) dispatchUi({ type: "set_modal", modal: "showCancelModal", value: true });
             else router.push("/staff/post-records");
@@ -217,7 +216,7 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
           showConfirmModal={ui.showConfirmModal}
           showCancelModal={ui.showCancelModal}
           selectedUserName={ui.selectedUser?.user_name}
-          isSubmitting={ui.isSubmitting}
+          isSubmitting={isSubmitting}
           onCloseConfirm={() => dispatchUi({ type: "set_modal", modal: "showConfirmModal", value: false })}
           onConfirm={() => void handleSubmit()}
           onCloseCancel={() => dispatchUi({ type: "set_modal", modal: "showCancelModal", value: false })}

@@ -19,7 +19,6 @@ export interface ClaimFormData {
 }
 
 export interface ClaimUiState {
-  isSubmitting: boolean;
   toast: { message: string; tone: "success" | "danger" } | null;
   searchQuery: string;
   selectedUser: SelectedUser | null;
@@ -32,7 +31,6 @@ export interface ClaimUiState {
 
 export type ClaimFormAction = { type: "set_field"; key: keyof ClaimFormData; value: string };
 export type ClaimUiAction =
-  | { type: "set_submitting"; value: boolean }
   | { type: "set_toast"; value: ClaimUiState["toast"] }
   | { type: "set_search_query"; value: string }
   | { type: "set_selected_user"; value: SelectedUser | null }
@@ -59,8 +57,6 @@ export function formReducer(state: ClaimFormData, action: ClaimFormAction): Clai
 
 export function uiReducer(state: ClaimUiState, action: ClaimUiAction): ClaimUiState {
   switch (action.type) {
-    case "set_submitting":
-      return { ...state, isSubmitting: action.value };
     case "set_toast":
       return { ...state, toast: action.value };
     case "set_search_query":

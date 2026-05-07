@@ -9,10 +9,11 @@ import type { PortalUserType } from "@/types/auth";
 import { fetchUsers, updateUserRole, searchUsers as searchUsersAPI } from "@/services/admin-service";
 import { insertAuditLog } from "@/services/audit-logs-service";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { logError } from "@/lib/error-utils";
+import { formatRelativeTime } from "@/lib/time";
 import type { UserListItem } from "@/types/auth";
 import Image from "next/image";
-import { toPhilippineTime, getRelativeTime } from "@/lib/date-utils";
 
 interface UserCardProps {
   user: UserListItem;
@@ -104,11 +105,11 @@ function UserCard({ user, isCurrentUser, onRemove, onEdit, isRemoving, isSelecte
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
             <div className="flex items-center gap-1">
               <Calendar className="size-3" />
-              <span>Joined {toPhilippineTime(user.created_at)}</span>
+              <span>Joined {formatDateTimeInPhilippineTime(user.created_at, "Never")}</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock className="size-3" />
-              <span>Last login {getRelativeTime(user.last_login)}</span>
+              <span>Last login {user.last_login ? formatRelativeTime(user.last_login) : "Never"}</span>
             </div>
           </div>
         </div>
@@ -733,8 +734,8 @@ export default function AdminManagementPage() {
       u.email || "No email",
       u.user_type,
       u.user_id,
-      toPhilippineTime(u.created_at),
-      u.last_login ? toPhilippineTime(u.last_login) : "Never",
+      formatDateTimeInPhilippineTime(u.created_at, "Never"),
+      u.last_login ? formatDateTimeInPhilippineTime(u.last_login, "Never") : "Never",
     ]);
 
     // Build CSV content

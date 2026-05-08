@@ -86,7 +86,27 @@ export function formReducer(state: CreatePostFormState, action: FormAction): Cre
     case "set_image":
       return { ...state, image: action.value };
     case "set_location":
-      return { ...state, locationDetails: { ...state.locationDetails, [action.key]: action.value } };
+      if (action.key === "level1") {
+        return {
+          ...state,
+          locationDetails: {
+            level1: action.value,
+            level2: "",
+            level3: "",
+          },
+        };
+      }
+      if (action.key === "level2") {
+        return {
+          ...state,
+          locationDetails: {
+            ...state.locationDetails,
+            level2: action.value,
+            level3: "",
+          },
+        };
+      }
+      return { ...state, locationDetails: { ...state.locationDetails, level3: action.value } };
   }
 }
 

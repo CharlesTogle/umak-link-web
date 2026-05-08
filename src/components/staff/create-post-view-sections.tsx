@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { useMemo } from "react";
 import { Info, Loader2, Upload, X } from "lucide-react";
+import { LOCATIONS_DATA, type CampusLocationLevel1, type CampusLocationLevel2 } from "@/lib/locations-data";
 import { POST_CATEGORIES } from "@/lib/post-categories";
 import type { Meridian } from "@/lib/date-time-helpers";
 import type { LocationDetails } from "@/types/create-post";
@@ -84,6 +86,20 @@ export function CreatePostFormSection(props: {
   onMeridianChange: (value: Meridian) => void;
   onLocationChange: (key: keyof LocationDetails, value: string) => void;
 }) {
+  const level1Options = LOCATIONS_DATA.map((level1: CampusLocationLevel1) => level1.name);
+
+  const level2Options = useMemo(() => {
+    const selectedLevel1 = LOCATIONS_DATA.find((level1: CampusLocationLevel1) => level1.name === props.locationDetails.level1);
+    return selectedLevel1 ? selectedLevel1.level2.map((level2: CampusLocationLevel2) => level2.name) : [];
+  }, [props.locationDetails.level1]);
+
+  const level3Options = useMemo(() => {
+    const selectedLevel1 = LOCATIONS_DATA.find((level1: CampusLocationLevel1) => level1.name === props.locationDetails.level1);
+    const selectedLevel2 = selectedLevel1?.level2.find((level2: CampusLocationLevel2) => level2.name === props.locationDetails.level2);
+    if (!selectedLevel2) return [];
+    return selectedLevel2.level3.length > 0 ? selectedLevel2.level3 : ["Not Applicable"];
+  }, [props.locationDetails.level1, props.locationDetails.level2]);
+
   return (
     <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <div>
@@ -166,30 +182,51 @@ export function CreatePostFormSection(props: {
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">Building/Area *</label>
-          <input
-            type="text"
+          <select
             value={props.locationDetails.level1}
             onChange={(event) => props.onLocationChange("level1", event.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1D2981]"
-          />
+            disabled={props.isAiGenerating}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1D2981] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+          >
+            <option value="">Select building/area</option>
+            {level1Options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">Floor/Side *</label>
-          <input
-            type="text"
+          <select
             value={props.locationDetails.level2}
             onChange={(event) => props.onLocationChange("level2", event.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1D2981]"
-          />
+            disabled={!props.locationDetails.level1 || props.isAiGenerating}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1D2981] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+          >
+            <option value="">Select floor/side</option>
+            {level2Options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">Room/Place *</label>
-          <input
-            type="text"
+          <select
             value={props.locationDetails.level3}
             onChange={(event) => props.onLocationChange("level3", event.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1D2981]"
-          />
+            disabled={!props.locationDetails.level2 || props.isAiGenerating}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1D2981] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+          >
+            <option value="">Select room/place</option>
+            {level3Options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     </div>

@@ -30,7 +30,7 @@ const PLACEHOLDER_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(`
   </defs>
   <rect width="1200" height="800" fill="url(#g)"/>
   <rect x="80" y="80" width="1040" height="640" rx="36" fill="#ffffff" opacity="0.9"/>
-  <text x="600" y="390" text-anchor="middle" font-size="48" font-family="Arial, sans-serif" fill="#1e3a8a">UMak LINK Preview</text>
+  <text x="600" y="390" text-anchor="middle" font-size="48" font-family="Arial, sans-serif" fill="#1e3a8a">UMak-LINK Preview</text>
   <text x="600" y="450" text-anchor="middle" font-size="24" font-family="Arial, sans-serif" fill="#475569">Generated mock asset for deliverable export</text>
 </svg>
 `)}`;

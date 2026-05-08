@@ -33,7 +33,7 @@ export default function Home() {
         <div className="mx-auto w-full max-w-6xl">
           <Card className="overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/90 shadow-[0_30px_80px_-40px_rgba(3,7,32,0.8)] backdrop-blur">
             <CardHeader className="space-y-4 px-6 pb-6 pt-8 text-center md:px-10">
-              <Badge className="mx-auto w-fit bg-[#1D2981] text-white">UMak LINK Web</Badge>
+              <Badge className="mx-auto w-fit bg-[#1D2981] text-white">UMak-LINK Web</Badge>
               <CardTitle className="text-3xl font-extrabold tracking-tight text-[#101B5B] md:text-5xl">
                 Admin and Staff Portal
               </CardTitle>

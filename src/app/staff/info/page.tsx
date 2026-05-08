@@ -14,13 +14,13 @@ export default function StaffInfoPage () {
           </p>
           <h1 className='mt-2 text-3xl font-bold text-[#1D2981]'>About OHSO</h1>
           <p className='mt-2 max-w-3xl text-sm text-slate-600'>
-            University health and safety context for UMak LINK staff operations.
+            University health and safety context for UMak-LINK staff operations.
           </p>
         </section>
 
         <section className='rounded-3xl border border-slate-200 bg-white p-6 shadow-sm'>
           <div className='grid gap-6 lg:grid-cols-[8rem_minmax(0,1fr)_22rem] lg:items-start'>
-            <div className='inline-flex size-32 items-center justify-center justify-self-center rounded-full border-4 border-[#1D2981]/20 bg-[#e9f4fb]'>
+            <div className='flex size-32 items-center justify-center justify-self-center'>
               <Image
                 src='/images/umak-ohso.svg'
                 alt='University of Makati Occupational Health and Safety Office logo'

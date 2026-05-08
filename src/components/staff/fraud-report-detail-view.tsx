@@ -82,7 +82,7 @@ export function FraudReportDetailView({ reportId }: { reportId: string }) {
           sendNotification({
             user_id: report.reporter_id,
             title: "Fraud Report Opened",
-            body: `Your report on "${report.item_name ?? "Unknown Item"}" has been opened and is being investigated. Thank you for helping keep UMak LINK safe.`,
+            body: `Your report on "${report.item_name ?? "Unknown Item"}" has been opened and is being investigated. Thank you for helping keep UMak-LINK safe.`,
             type: "acceptance",
           }),
         ]);
@@ -133,7 +133,7 @@ export function FraudReportDetailView({ reportId }: { reportId: string }) {
             user_id: report.reporter_id,
             title: deleteClaim ? "Report Resolved - Item Available" : "Report Resolved",
             body: deleteClaim
-              ? `Your report on "${report.item_name ?? "Unknown Item"}" has been resolved. The item is now available for claiming again. Thank you for keeping UMak LINK safe.`
+              ? `Your report on "${report.item_name ?? "Unknown Item"}" has been resolved. The item is now available for claiming again. Thank you for keeping UMak-LINK safe.`
               : `Your report on "${report.item_name ?? "Unknown Item"}" has been resolved. The staff decided not to retrieve the item from the claimer.`,
             type: deleteClaim ? "acceptance" : "info",
           }),

@@ -3,8 +3,8 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "UMak LINK WEB",
-  description: "Admin and staff web portal for UMak LINK",
+  title: "UMak-LINK Web",
+  description: "Admin and staff web portal for UMak-LINK",
 };
 
 export const viewport: Viewport = {

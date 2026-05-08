@@ -1,9 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function NotAllowedPage() {
   const router = useRouter();
+  const clearSession = useAuthStore((state) => state.clearSession);
+
+  const handleGoToLoginPage = () => {
+    clearSession();
+    router.replace("/");
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
@@ -25,7 +32,7 @@ export default function NotAllowedPage() {
           </button>
           <button
             type="button"
-            onClick={() => router.replace("/")}
+            onClick={handleGoToLoginPage}
             className="inline-flex items-center justify-center rounded-lg bg-[#1D2981] px-4 py-2 text-sm font-medium text-white hover:bg-[#111d6d]"
           >
             Go to login page

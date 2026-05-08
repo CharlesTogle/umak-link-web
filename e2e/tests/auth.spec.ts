@@ -83,6 +83,27 @@ test.describe('Authentication & Session Management', () => {
     expect(role).toBeNull();
   });
 
+  test('go to login page from not allowed clears authentication state', async ({
+    page,
+    adminUser,
+    setAuthToken,
+  }) => {
+    await setAuthToken(adminUser);
+    await page.goto(APP_ROUTES.notAllowed);
+
+    await page.getByRole('button', { name: 'Go to login page' }).click();
+    await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
+
+    const token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
+    const role = await page.evaluate(() => localStorage.getItem('umak_link_web_role'));
+    const cookies = await page.context().cookies();
+    const tokenCookie = cookies.find((cookie) => cookie.name === 'umak_link_web_api_token');
+
+    expect(token).toBeNull();
+    expect(role).toBeNull();
+    expect(tokenCookie).toBeUndefined();
+  });
+
   test('auth token persists across page navigation', async ({
     page,
     adminUser,
@@ -130,7 +151,6 @@ test.describe('Authentication & Session Management', () => {
 
     // Should either redirect or show unauthorized state
     // The actual behavior depends on your app's implementation
-    const pageTitle = await page.title();
     const url = page.url();
 
     // If redirected, should not be at admin dashboard

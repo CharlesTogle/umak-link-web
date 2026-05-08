@@ -164,7 +164,6 @@ export function StaffSidebar() {
                 <Bell className="size-4" />
                 View Notifications
               </span>
-              <span className="text-xs text-slate-400">Open</span>
             </Link>
           </div>
 

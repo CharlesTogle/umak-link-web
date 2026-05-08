@@ -80,9 +80,11 @@ export function CompactPostCard({
             <UserCircle2 className="size-4" />
           )}
         </span>
-        <span className="truncate font-medium text-slate-700">{displayName}</span>
-        <span className="text-slate-300">•</span>
-        <span className="whitespace-nowrap">{formatRelativeTime(post.submissionDate, post.hoursAgo)}</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate font-medium text-slate-700">{displayName}</span>
+          <span className="shrink-0 text-slate-300">•</span>
+          <span className="shrink-0 whitespace-nowrap">{formatRelativeTime(post.submissionDate, post.hoursAgo)}</span>
+        </div>
       </div>
 
       <h3 className="mb-3 text-xl font-semibold leading-tight text-slate-900">{post.title}</h3>

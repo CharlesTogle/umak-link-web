@@ -59,7 +59,7 @@ export function PostRecordCard({
       className="cursor-pointer rounded-3xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm transition hover:shadow-md"
     >
       <div className="mb-3 flex items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-2 text-sm text-slate-500">
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-slate-500">
           <span className="inline-flex size-7 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-slate-700">
             {record.posterProfileUrl ? (
               <Image
@@ -74,9 +74,11 @@ export function PostRecordCard({
               <UserCircle2 className="size-4" />
             )}
           </span>
-          <span className="truncate font-medium text-slate-700">{displayName}</span>
-          <span className="text-slate-300">•</span>
-          <span className="whitespace-nowrap">{formatRelativeTime(record.submissionDate, record.hoursAgo)}</span>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="truncate font-medium text-slate-700">{displayName}</span>
+            <span className="shrink-0 text-slate-300">•</span>
+            <span className="shrink-0 whitespace-nowrap">{formatRelativeTime(record.submissionDate, record.hoursAgo)}</span>
+          </div>
         </div>
         <PostTagChip
           label={record.itemType === "missing" ? "Missing Item" : "Found Item"}

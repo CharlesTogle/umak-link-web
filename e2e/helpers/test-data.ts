@@ -1,5 +1,5 @@
 import type { AuthUser } from '@/types/auth';
-import type { PostRecord } from '@/types/post-record';
+import type { ApiPostRecord } from '@/types/post-record-api';
 import { POST_CATEGORIES } from '@/lib/post-categories';
 
 // Test user accounts with their JWT tokens (mocked payloads)
@@ -58,34 +58,81 @@ export const TEST_CONSTANTS = {
 };
 
 // Helper to create random post data
-export function createMockPost(overrides?: Partial<PostRecord>): PostRecord {
+type MockPostOverrides = Partial<ApiPostRecord> & {
+  imageUrl?: string | null;
+  itemName?: string | null;
+  itemStatus?: string | null;
+  itemType?: ApiPostRecord['item_type'] | 'lost';
+  lastSeenAt?: string | null;
+  lastSeenLocation?: string | null;
+  postStatus?: string | null;
+  post_type?: 'Lost' | 'Found' | 'lost' | 'found' | null;
+  posterId?: string | null;
+  posterName?: string | null;
+  posterProfileUrl?: string | null;
+  submissionDate?: string | null;
+};
+
+function normalizeMockItemType(
+  itemType: MockPostOverrides['item_type'] | MockPostOverrides['itemType'] | MockPostOverrides['post_type']
+): ApiPostRecord['item_type'] | null {
+  if (!itemType) return null;
+  const normalized = itemType.toLowerCase();
+  if (normalized === 'missing' || normalized === 'lost') return 'missing';
+  if (normalized === 'found') return 'found';
+  return null;
+}
+
+export function createMockPost(overrides?: MockPostOverrides): ApiPostRecord {
   const categories = TEST_CONSTANTS.VALID_CATEGORIES;
   const category = categories[Math.floor(Math.random() * categories.length)] || 'Other';
   const itemTypes = ['missing', 'found'] as const;
-  const itemType = itemTypes[Math.floor(Math.random() * 2)]!;
-  const itemStatuses = ['Claimed', 'Unclaimed', 'Lost', 'Returned'] as const;
-  const itemStatus = itemStatuses[Math.floor(Math.random() * 4)]!;
+  const fallbackItemType = itemTypes[Math.floor(Math.random() * 2)]!;
+  const itemStatuses = ['claimed', 'unclaimed', 'lost', 'returned'] as const;
+  const fallbackItemStatus = itemStatuses[Math.floor(Math.random() * 4)]!;
+  const {
+    imageUrl,
+    itemName,
+    itemStatus,
+    itemType,
+    lastSeenAt,
+    lastSeenLocation,
+    postStatus,
+    post_type,
+    posterId,
+    posterName,
+    posterProfileUrl,
+    submissionDate,
+    ...apiOverrides
+  } = overrides ?? {};
+  const resolvedItemType =
+    normalizeMockItemType(apiOverrides.item_type ?? itemType ?? post_type) ?? fallbackItemType;
 
   return {
-    postId: `post-${Date.now()}-${Math.random()}`,
-    posterId: 'staff-001',
-    itemType,
-    itemName: `Test ${itemType} Item ${Date.now()}`,
-    category,
-    itemDescription: 'This is a test item description',
-    imageUrl: 'https://via.placeholder.com/300x300',
-    lastSeenLocation: TEST_CONSTANTS.VALID_LOCATIONS[0] || 'Other',
-    itemStatus,
-    postStatus: 'Accepted',
-    submissionDate: new Date().toISOString(),
-    hoursAgo: 0,
-    username: 'Test User',
-    isAnonymous: false,
-    posterProfileUrl: null,
-    itemId: null,
-    title: `Test ${itemType} Item`,
-    lastSeenAt: new Date().toISOString(),
-    ...overrides,
+    post_id: Date.now(),
+    item_id: null,
+    poster_name: posterName ?? apiOverrides.poster_name ?? 'Test User',
+    poster_id: posterId ?? apiOverrides.poster_id ?? 'staff-001',
+    poster_profile_picture_url:
+      posterProfileUrl ?? apiOverrides.poster_profile_picture_url ?? null,
+    item_name:
+      itemName ?? apiOverrides.item_name ?? `Test ${resolvedItemType} Item ${Date.now()}`,
+    item_description: apiOverrides.item_description ?? 'This is a test item description',
+    item_type: resolvedItemType,
+    item_image_url:
+      imageUrl ?? apiOverrides.item_image_url ?? 'https://via.placeholder.com/300x300',
+    category: apiOverrides.category ?? category,
+    last_seen_at: lastSeenAt ?? apiOverrides.last_seen_at ?? new Date().toISOString(),
+    last_seen_location:
+      lastSeenLocation ??
+      apiOverrides.last_seen_location ??
+      TEST_CONSTANTS.VALID_LOCATIONS[0] ??
+      'Other',
+    submission_date: submissionDate ?? apiOverrides.submission_date ?? new Date().toISOString(),
+    post_status: postStatus ?? apiOverrides.post_status ?? 'accepted',
+    item_status: itemStatus ?? apiOverrides.item_status ?? fallbackItemStatus,
+    is_anonymous: apiOverrides.is_anonymous ?? false,
+    ...apiOverrides,
   };
 }
 

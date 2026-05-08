@@ -185,7 +185,7 @@ test.describe('Staff Dashboard', () => {
     await page.goto(APP_ROUTES.staff.dashboard);
 
     // Look for clickable post item
-    const postItem = page.locator('a, button', { hasText: post.item_name });
+    const postItem = page.locator('a, button', { hasText: post.item_name ?? '' });
 
     if (await postItem.count().then((n) => n > 0)) {
       await postItem.first().click();

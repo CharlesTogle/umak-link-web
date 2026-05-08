@@ -8,7 +8,7 @@ function normalizeReason(reason?: string | null): string | null {
 
 export function buildPostRejectionNotificationCopy(params: {
   itemName: string;
-  rejectionReason?: string | null;
+  rejectionReason?: string | null | undefined;
 }) {
   const rejectionReason =
     normalizeReason(params.rejectionReason) ?? "No reason provided.";

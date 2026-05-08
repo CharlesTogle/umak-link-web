@@ -99,9 +99,6 @@ export function CompactPostCard({
 
       <div className="grid gap-1 text-sm text-slate-600">
         <p>
-          <span className="text-slate-500">Item:</span> {post.itemName}
-        </p>
-        <p>
           <span className="text-slate-500">Owner:</span> {post.username}
           {post.isAnonymous ? " (Anonymous)" : ""}
         </p>

@@ -109,9 +109,6 @@ export function PostRecordCard({
 
       <div className="grid gap-1 text-sm text-slate-600">
         <p>
-          <span className="text-slate-500">Item:</span> {record.itemName}
-        </p>
-        <p>
           <span className="text-slate-500">Last seen:</span> {record.lastSeenLocation ?? "N/A"}
         </p>
         <p>

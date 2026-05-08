@@ -20,7 +20,7 @@ export function AdminSidebar() {
   const clearSession = useAuthStore((state) => state.clearSession);
   const { user, isLoading } = useCurrentUser();
   const infoActive = isActive(pathname, "/admin/info");
-  const unreadCountQuery = useUnreadNotificationsCount(Boolean(user));
+  const unreadCountQuery = useUnreadNotificationsCount(user?.user_id ?? null);
   const unreadCount = unreadCountQuery.data?.unread_count ?? 0;
   const countLoading = unreadCountQuery.isLoading;
 

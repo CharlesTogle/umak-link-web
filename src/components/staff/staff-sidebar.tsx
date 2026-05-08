@@ -55,7 +55,7 @@ export function StaffSidebar() {
     Dashboard: true,
     "Post Records": true,
   });
-  const unreadCountQuery = useUnreadNotificationsCount(Boolean(user));
+  const unreadCountQuery = useUnreadNotificationsCount(user?.user_id ?? null);
   const unreadCount = unreadCountQuery.data?.unread_count ?? 0;
   const countLoading = unreadCountQuery.isLoading;
 

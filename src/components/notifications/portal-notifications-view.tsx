@@ -6,6 +6,7 @@ import { NotificationItem } from "@/components/staff/notification-item";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { logError } from "@/lib/error-utils";
+import { filterVisibleNotifications } from "@/lib/notifications";
 import {
   getRoleNotificationPostPathBaseFromUserType,
   getRoleNotificationsPathFromUserType,
@@ -44,7 +45,7 @@ export function PortalNotificationsView({
       }
 
       const data = await fetchNotifications();
-      setNotifications(data);
+      setNotifications(filterVisibleNotifications(data, userId));
     } catch (error) {
       logError("Failed to fetch notifications:", error);
     } finally {
@@ -54,7 +55,7 @@ export function PortalNotificationsView({
         setLoading(false);
       }
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!userLoading && userId) {

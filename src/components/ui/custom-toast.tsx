@@ -1,4 +1,4 @@
-export type CustomToastTone = "success" | "danger";
+export type CustomToastTone = "success" | "danger" | "info";
 
 interface CustomToastProps {
   message: string;
@@ -10,6 +10,7 @@ interface CustomToastProps {
 const toneStyles: Record<CustomToastTone, string> = {
   success: "border-[#8ED8B3] bg-[#DDEBE5] text-[#067C5A]",
   danger: "border-rose-300 bg-rose-50 text-rose-700",
+  info: "border-sky-200 bg-sky-50 text-sky-700",
 };
 
 export function CustomToast({ message, tone, mode = "inline", className = "" }: CustomToastProps) {

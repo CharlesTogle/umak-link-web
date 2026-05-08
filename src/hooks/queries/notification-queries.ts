@@ -4,14 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchUnreadNotificationsCount } from "@/services/notifications-service";
 
 export const notificationKeys = {
-  unreadCount: ["notifications", "unread-count"] as const,
+  unreadCount: (userId: string | null) =>
+    ["notifications", "unread-count", userId] as const,
 };
 
-export function useUnreadNotificationsCount(enabled: boolean) {
+export function useUnreadNotificationsCount(userId: string | null) {
   return useQuery({
-    queryKey: notificationKeys.unreadCount,
+    queryKey: notificationKeys.unreadCount(userId),
     queryFn: fetchUnreadNotificationsCount,
-    enabled,
+    enabled: Boolean(userId),
     refetchInterval: 30_000,
   });
 }

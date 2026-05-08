@@ -9,6 +9,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { logError } from "@/lib/error-utils";
+import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { fetchAuditLogs, type AuditLog } from "@/services/audit-logs-service";
 import {
   formatActionType,
@@ -167,6 +168,14 @@ export default function AdminAuditLogPage() {
   const uniqueActionTypes = getUniqueActionTypes(auditLogs);
   const uniqueUserNames = getUniqueUserNames(auditLogs);
 
+  const formatAuditValue = (key: string, value: unknown): string => {
+    if (key === "timestamp" && typeof value === "string") {
+      return formatDateTimeInPhilippineTime(value);
+    }
+
+    return typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+  };
+
   // Infinite scroll
   const sentinelRef = useInfiniteScroll({
     onLoadMore: handleLoadMore,
@@ -255,13 +264,7 @@ export default function AdminAuditLogPage() {
                           {/* Content */}
                           <div className="min-w-0 flex-1">
                             <p className="text-xs text-slate-500">
-                              {new Date(log.timestamp).toLocaleString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
+                              {formatDateTimeInPhilippineTime(log.timestamp)}
                             </p>
                             <p className="mt-1 font-semibold text-slate-900">{message}</p>
                           </div>
@@ -291,7 +294,7 @@ export default function AdminAuditLogPage() {
                                         :{" "}
                                       </span>
                                       <span className="text-slate-600">
-                                        {typeof value === "object" ? JSON.stringify(value, null, 2) : String(value)}
+                                        {formatAuditValue(key, value)}
                                       </span>
                                     </div>
                                   ))}

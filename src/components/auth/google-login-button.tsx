@@ -8,7 +8,6 @@ import { getRemainingLoginCooldownMs, registerLoginAttempt } from "@/lib/login-r
 import { getSupabaseClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
 import { fetchCurrentUser, syncProfilePictureFromGoogle } from "@/services/auth-service";
-import type { AuthUser } from "@/types/auth";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
 
@@ -103,15 +102,13 @@ export default function GoogleLoginButton() {
         throw signInError;
       }
 
-      let currentUser: AuthUser | null = null;
-
       try {
-        currentUser = await syncProfilePictureFromGoogle(credential);
+        await syncProfilePictureFromGoogle(credential);
       } catch {
-        currentUser = null;
+        // Profile sync is best-effort. Final auth routing must come from /auth/me.
       }
 
-      currentUser ??= await fetchCurrentUser();
+      const currentUser = await fetchCurrentUser();
       const nextPath = getRoleHomePathFromUserType(currentUser?.user_type);
 
       if (!currentUser || !nextPath) {

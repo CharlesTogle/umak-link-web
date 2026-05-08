@@ -48,7 +48,7 @@ function getStatusChipClass(active: boolean, disabled = false): string {
 }
 
 function getLinkedOwnerName(linkedPost: LinkedPostRecord): string {
-  return linkedPost.is_anonymous ? "Anonymous" : linkedPost.poster_name ?? "Unknown User";
+  return linkedPost.poster_name ?? "Unknown User";
 }
 
 function getLinkedPostAvatar(linkedPost: LinkedPostRecord): string | null {

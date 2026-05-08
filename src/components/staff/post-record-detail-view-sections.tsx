@@ -3,9 +3,10 @@
 import Image from "next/image";
 import { ArrowLeft, CircleUserRound, Copy, Handshake, Mail, RefreshCcw, Share2 } from "lucide-react";
 import { PhotoView } from "react-photo-view";
+import { StaffPosterName } from "@/components/staff/staff-poster-name";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { toDisplayLabel } from "@/lib/format-utils";
-import type { ApiItemStatus, ApiPostRecordDetails, ApiPostStatus } from "@/types/post-record-api";
+import type { ApiItemStatus, ApiPostRecordDetails } from "@/types/post-record-api";
 import type { LinkedPostRecord } from "@/types/ui";
 
 export function PostRecordDetailHeader(props: {
@@ -77,7 +78,11 @@ export function PostRecordMainPanel(props: { record: ApiPostRecordDetails; linke
           )}
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-900">{props.record.is_anonymous ? "Anonymous" : props.record.poster_name}</p>
+          <StaffPosterName
+            name={props.record.poster_name}
+            isAnonymous={props.record.is_anonymous}
+            nameClassName="text-sm font-semibold text-slate-900"
+          />
           <p className="text-xs text-slate-500">Submitted {formatDateTimeInPhilippineTime(props.record.submitted_on_date_local, "Unknown")}</p>
         </div>
       </div>
@@ -131,7 +136,15 @@ export function LinkedPostPanel(props: {
         <div className="min-w-[220px] flex-1 text-sm text-slate-600">
           <p className="text-lg font-semibold text-slate-900">{props.linkedPost.item_name ?? "Untitled item"}</p>
           <p className="mt-1">{props.linkedPost.item_description ?? "No description provided."}</p>
-          <p className="mt-2 text-xs text-slate-500"><span className="font-medium text-slate-700">Owner:</span> {props.getLinkedOwnerName(props.linkedPost)}</p>
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className="font-medium text-slate-700">Owner:</span>
+            <StaffPosterName
+              name={props.getLinkedOwnerName(props.linkedPost)}
+              isAnonymous={props.linkedPost.is_anonymous}
+              nameClassName="text-xs text-slate-500"
+              badgeClassName="text-[10px]"
+            />
+          </p>
           <p className="text-xs text-slate-500"><span className="font-medium text-slate-700">Post ID:</span> {String(props.linkedPost.post_id)}</p>
           <div className="mt-3">
             <button type="button" onClick={props.onViewLinkedPost} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50">
@@ -165,7 +178,14 @@ export function PostRecordDetailsPanel(props: { record: ApiPostRecordDetails; no
       <h3 className="mt-5 text-lg font-semibold text-slate-900">Poster Details</h3>
       <p className="mt-1 text-sm text-slate-600">Contact information of the user who posted this item.</p>
       <div className="mt-2 text-sm text-slate-600">
-        <p><span className="font-medium text-slate-700">Name:</span> {props.record.poster_name}</p>
+        <p className="flex flex-wrap items-center gap-2">
+          <span className="font-medium text-slate-700">Name:</span>
+          <StaffPosterName
+            name={props.record.poster_name}
+            isAnonymous={props.record.is_anonymous}
+            nameClassName="text-slate-600"
+          />
+        </p>
         <p><span className="font-medium text-slate-700">Email:</span> {props.record.poster_email}</p>
       </div>
       {props.record.claimer_name || props.normalizedItemStatus === "returned" ? (

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Copy, Ellipsis, FileText, Handshake, Mail, Share2, UserCircle2 } from "lucide-react";
 import type { MouseEvent } from "react";
+import { StaffPosterName } from "@/components/staff/staff-poster-name";
 import { PostTagChip } from "@/components/staff/post-tag-chip";
 import { formatDateInPhilippineTime } from "@/lib/date-time-helpers";
 import { formatRelativeTime } from "@/lib/time";
@@ -33,7 +34,6 @@ export function PostRecordCard({
   record: PostRecord;
   onAction: (action: PostRecordAction, record: PostRecord) => void;
 }) {
-  const displayName = record.isAnonymous ? "Anonymous" : record.username;
   const canNotify = record.itemType === "missing" && record.itemStatus === "Lost";
   const canClaim =
     record.itemType === "found" && record.itemStatus === "Unclaimed" && record.postStatus === "Accepted";
@@ -64,7 +64,7 @@ export function PostRecordCard({
             {record.posterProfileUrl ? (
               <Image
                 src={record.posterProfileUrl}
-                alt={record.isAnonymous ? "Anonymous user" : record.username}
+                alt={record.username}
                 width={28}
                 height={28}
                 className="size-full object-cover"
@@ -75,7 +75,12 @@ export function PostRecordCard({
             )}
           </span>
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="truncate font-medium text-slate-700">{displayName}</span>
+            <StaffPosterName
+              name={record.username}
+              isAnonymous={record.isAnonymous}
+              className="min-w-0 flex-1"
+              nameClassName="font-medium text-slate-700"
+            />
             <span className="shrink-0 text-slate-300">•</span>
             <span className="shrink-0 whitespace-nowrap">{formatRelativeTime(record.submissionDate, record.hoursAgo)}</span>
           </div>
@@ -92,10 +97,11 @@ export function PostRecordCard({
         {record.category ? <PostTagChip label={record.category} tone="neutral" /> : null}
       </div>
 
-      <h3 className="mb-3 text-xl font-semibold leading-tight text-slate-900">{record.title}</h3>
+      <h3 className="text-xl font-semibold leading-tight text-slate-900">{record.title}</h3>
+      <p className="mt-3 text-sm text-slate-600">{record.itemDescription ?? EMPTY_DESCRIPTION}</p>
 
       {record.imageUrl ? (
-        <div className="relative mb-3 h-56 w-full overflow-hidden rounded-2xl md:h-72">
+        <div className="relative mt-4 h-56 w-full overflow-hidden rounded-2xl md:h-72">
           <Image
             src={record.imageUrl}
             alt={record.itemName}
@@ -106,7 +112,7 @@ export function PostRecordCard({
         </div>
       ) : null}
 
-      <div className="grid gap-1 text-sm text-slate-600">
+      <div className="mt-4 grid gap-1 text-sm text-slate-600">
         <p>
           <span className="text-slate-500">Last seen:</span> {record.lastSeenLocation ?? "N/A"}
         </p>
@@ -117,8 +123,6 @@ export function PostRecordCard({
           <span className="text-slate-500">Submitted:</span> {formatDate(record.submissionDate)}
         </p>
       </div>
-
-      <p className="mt-3 text-sm text-slate-600">{record.itemDescription ?? EMPTY_DESCRIPTION}</p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button

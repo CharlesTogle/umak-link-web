@@ -10,6 +10,7 @@ import {
   useDashboardPosts,
   useDashboardStats,
 } from "@/hooks/queries/post-queries";
+import { buildPostRejectionNotificationCopy } from "@/lib/post-rejection";
 import { shareLink } from "@/lib/share-link";
 import { matchMissingItem } from "@/services/search-service";
 import { updatePostStatus } from "@/services/posts-service";
@@ -131,10 +132,14 @@ export function StaffDashboardView() {
       });
 
       const notificationTitle = decision === "accepted" ? "Post Accepted" : "Post Rejected";
+      const rejectionNotificationCopy = buildPostRejectionNotificationCopy({
+        itemName: post.itemName,
+        rejectionReason,
+      });
       const notificationBody =
         decision === "accepted"
           ? `Your post about "${post.itemName}" has been accepted and is now visible on the platform.`
-          : `Your post about "${post.itemName}" has been rejected and will not be published on the platform. You can edit and submit again or delete it. Reason: ${rejectionReason ?? "No reason provided."}`;
+          : rejectionNotificationCopy.body;
 
       await sendNotification({
         user_id: post.posterId,
@@ -143,7 +148,7 @@ export function StaffDashboardView() {
         description:
           decision === "accepted"
             ? "Your post is now visible on the platform."
-            : rejectionReason ?? "No reason provided.",
+            : rejectionNotificationCopy.description,
         type: decision === "accepted" ? "accept" : "rejection",
         data: {
           postId: post.postId,

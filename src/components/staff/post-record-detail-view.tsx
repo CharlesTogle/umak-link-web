@@ -6,6 +6,7 @@ import { PhotoProvider } from "react-photo-view";
 import { POST_REJECTION_REASONS } from "@/config/constants";
 import { useLinkedPost, usePostDetail } from "@/hooks/queries/post-queries";
 import { normalizeValue, toDisplayLabel } from "@/lib/format-utils";
+import { buildPostRejectionNotificationCopy } from "@/lib/post-rejection";
 import {
   getPostRecordStatusChangeDecision,
   getPostRecordItemStatusOptions,
@@ -97,11 +98,15 @@ function buildStatusChangeNotifications(params: {
         ...(params.imageUrl ? { image_url: params.imageUrl } : {}),
       });
     } else if (params.nextPostStatus === "rejected") {
+      const rejectionNotificationCopy = buildPostRejectionNotificationCopy({
+        itemName: params.itemName,
+        rejectionReason: params.rejectionReason,
+      });
       notifications.push({
         user_id: params.posterId,
         title: "Post Rejected",
-        body: `Your post about "${params.itemName}" has been rejected and will not be published on the platform. You can edit and submit again or delete it. Reason: ${params.rejectionReason ?? "No reason provided."}`,
-        description: params.rejectionReason ?? "Post rejected",
+        body: rejectionNotificationCopy.body,
+        description: rejectionNotificationCopy.description,
         type: "rejection",
         data: notificationData,
         ...(params.imageUrl ? { image_url: params.imageUrl } : {}),

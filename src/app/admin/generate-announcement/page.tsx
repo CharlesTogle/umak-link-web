@@ -175,26 +175,21 @@ export default function AdminGenerateAnnouncementPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-[#1D2981]">Create Announcement</h1>
-        <div className="flex gap-2">
-          <Button onClick={handleCancel} variant="outline" size="sm" disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            className="bg-[#1D2981] hover:bg-[#1D2981]/90"
-            size="sm"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <div className="mr-2 size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Posting...
-              </>
-            ) : (
-              "Post"
-            )}
-          </Button>
-        </div>
+        <Button
+          onClick={handleSubmit}
+          className="bg-[#1D2981] hover:bg-[#1D2981]/90"
+          size="sm"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <div className="mr-2 size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Posting...
+            </>
+          ) : (
+            "Post"
+          )}
+        </Button>
       </div>
 
       {/* Form Card */}
@@ -289,22 +284,34 @@ export default function AdminGenerateAnnouncementPage() {
               </div>
             </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full bg-[#1D2981] hover:bg-[#1D2981]/90"
-              size="lg"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <div className="mr-2 size-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Posting Announcement...
-                </>
-              ) : (
-                "Post Announcement"
-              )}
-            </Button>
+            {/* Form Actions */}
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                type="button"
+                onClick={handleCancel}
+                variant="outline"
+                className="w-full sm:flex-1"
+                size="lg"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="w-full bg-[#1D2981] hover:bg-[#1D2981]/90 sm:flex-1"
+                size="lg"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <div className="mr-2 size-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Posting Announcement...
+                  </>
+                ) : (
+                  "Post Announcement"
+                )}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

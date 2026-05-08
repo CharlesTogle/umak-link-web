@@ -21,12 +21,6 @@ function statusTone(status: PostRecord["postStatus"]): "warning" | "success" | "
   return "warning";
 }
 
-function itemStatusTone(status: PostRecord["itemStatus"]): "neutral" | "success" | "primary" {
-  if (status === "Returned") return "success";
-  if (status === "Claimed") return "primary";
-  return "neutral";
-}
-
 export function PostRecordCard({
   record,
   onAction,
@@ -81,7 +75,6 @@ export function PostRecordCard({
               className="min-w-0 flex-1"
               nameClassName="font-medium text-slate-700"
             />
-            <span className="shrink-0 text-slate-300">•</span>
             <span className="shrink-0 whitespace-nowrap">{formatRelativeTime(record.submissionDate, record.hoursAgo)}</span>
           </div>
         </div>
@@ -93,7 +86,6 @@ export function PostRecordCard({
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <PostTagChip label={record.postStatus} tone={statusTone(record.postStatus)} />
-        <PostTagChip label={record.itemStatus} tone={itemStatusTone(record.itemStatus)} />
         {record.category ? <PostTagChip label={record.category} tone="neutral" /> : null}
       </div>
 

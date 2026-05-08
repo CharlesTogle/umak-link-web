@@ -22,13 +22,6 @@ function statusTone(status: CompactPost["postStatus"]): "warning" | "success" | 
   return "warning";
 }
 
-function itemStatusTone(status: CompactPost["itemStatus"]): "warning" | "success" | "primary" | "neutral" {
-  if (status === "Claimed") return "primary";
-  if (status === "Returned") return "success";
-  if (status === "Lost" || status === "Unclaimed") return "warning";
-  return "neutral";
-}
-
 export function CompactPostCard({
   post,
   onAccept,
@@ -90,7 +83,6 @@ export function CompactPostCard({
               className="min-w-0 flex-1"
               nameClassName="font-medium text-slate-700"
             />
-            <span className="shrink-0 text-slate-300">•</span>
             <span className="shrink-0 whitespace-nowrap">{formatRelativeTime(post.submissionDate, post.hoursAgo)}</span>
           </div>
         </div>
@@ -99,7 +91,6 @@ export function CompactPostCard({
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <PostTagChip label={post.postStatus} tone={statusTone(post.postStatus)} />
-        <PostTagChip label={post.itemStatus} tone={itemStatusTone(post.itemStatus)} />
         {post.category ? <PostTagChip label={post.category} tone="neutral" /> : null}
       </div>
 

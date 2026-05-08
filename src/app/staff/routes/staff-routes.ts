@@ -29,7 +29,7 @@ export const staffPrimaryRoutes: StaffRouteGroup[] = [
     href: "/staff",
     icon: House,
     children: [
-      { label: "Lost Items", href: "/staff?type=lost" },
+      { label: "Missing Items", href: "/staff?type=lost" },
       { label: "Found Items", href: "/staff?type=found" },
     ],
   },
@@ -41,7 +41,7 @@ export const staffPrimaryRoutes: StaffRouteGroup[] = [
       { label: "All Records", href: buildPostRecordsSidebarHref("all") },
       { label: "Claimed", href: buildPostRecordsSidebarHref("claimed") },
       { label: "Unclaimed", href: buildPostRecordsSidebarHref("unclaimed") },
-      { label: "Lost", href: buildPostRecordsSidebarHref("lost") },
+      { label: "Missing", href: buildPostRecordsSidebarHref("lost") },
     ],
   },
   { label: "Fraud Reports", href: "/staff/fraud-reports", icon: ShieldAlert },

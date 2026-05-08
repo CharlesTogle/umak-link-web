@@ -117,53 +117,55 @@ export function PostRecordCard({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
-          onClick={handleActionClick("view")}
-        >
-          <FileText className="size-4" /> View details
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
-          onClick={handleActionClick("share")}
-        >
-          <Share2 className="size-4" /> Share
-        </button>
-        {canNotify ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100"
-            onClick={handleActionClick("notify")}
-          >
-            <Mail className="size-4" /> Notify owner
-          </button>
-        ) : null}
-        {canClaim ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100"
-            onClick={handleActionClick("claim")}
-          >
-            <Handshake className="size-4" /> Claim item
-          </button>
-        ) : null}
-        {canCopyItemId ? (
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <button
             type="button"
             className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
-            onClick={handleActionClick("copy-item-id")}
+            onClick={handleActionClick("view")}
           >
-            <Copy className="size-4" /> Copy item ID
+            <FileText className="size-4" /> View details
           </button>
-        ) : null}
+          {canNotify ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100"
+              onClick={handleActionClick("notify")}
+            >
+              <Mail className="size-4" /> Notify owner
+            </button>
+          ) : null}
+          {canClaim ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100"
+              onClick={handleActionClick("claim")}
+            >
+              <Handshake className="size-4" /> Claim item
+            </button>
+          ) : null}
+          {canCopyItemId ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
+              onClick={handleActionClick("copy-item-id")}
+            >
+              <Copy className="size-4" /> Copy item ID
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-full bg-[#1D2981]/10 px-3 py-1.5 text-sm text-[#1D2981] hover:bg-[#1D2981]/20"
+            onClick={handleActionClick("change-status")}
+          >
+            <Ellipsis className="size-4" /> Change status
+          </button>
+        </div>
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded-full bg-[#1D2981]/10 px-3 py-1.5 text-sm text-[#1D2981] hover:bg-[#1D2981]/20"
-          onClick={handleActionClick("change-status")}
+          className="ml-auto inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
+          onClick={handleActionClick("share")}
         >
-          <Ellipsis className="size-4" /> Change status
+          <Share2 className="size-4" /> Share
         </button>
       </div>
     </article>

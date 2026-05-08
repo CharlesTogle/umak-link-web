@@ -124,62 +124,64 @@ export function CompactPostCard({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {showActions ? (
-          <>
-            <button
-              type="button"
-              disabled={actionsDisabled}
-              onClick={(event) => {
-                event.stopPropagation();
-                onAccept?.(post);
-              }}
-              className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <CheckCircle2 className="size-4" />{" "}
-              {loadingAction === "accept"
-                ? isMissingItem
-                  ? "Matching..."
-                  : "Approving..."
-                : isMissingItem
-                  ? "Match"
-                  : "Approve"}
-            </button>
-            {isMissingItem ? (
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {showActions ? (
+            <>
               <button
                 type="button"
                 disabled={actionsDisabled}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onNotifySimilar?.(post);
+                  onAccept?.(post);
                 }}
-                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <CheckCircle2 className="size-4" />{" "}
-                {loadingAction === "notify"
-                  ? "Notifying..."
-                  : "Send Similar Item Notification"}
+                {loadingAction === "accept"
+                  ? isMissingItem
+                    ? "Matching..."
+                    : "Approving..."
+                  : isMissingItem
+                    ? "Match"
+                    : "Approve"}
               </button>
-            ) : null}
-            <button
-              type="button"
-              disabled={actionsDisabled}
-              onClick={(event) => {
-                event.stopPropagation();
-                onReject?.(post);
-              }}
-              className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <XCircle className="size-4" /> {loadingAction === "reject" ? "Rejecting..." : "Reject"}
-            </button>
-          </>
-        ) : null}
+              {isMissingItem ? (
+                <button
+                  type="button"
+                  disabled={actionsDisabled}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onNotifySimilar?.(post);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <CheckCircle2 className="size-4" />{" "}
+                  {loadingAction === "notify"
+                    ? "Notifying..."
+                    : "Send Similar Item Notification"}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={actionsDisabled}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onReject?.(post);
+                }}
+                className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <XCircle className="size-4" /> {loadingAction === "reject" ? "Rejecting..." : "Reject"}
+              </button>
+            </>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
             onShare?.(post);
           }}
-          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
+          className="ml-auto inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
         >
           <Share2 className="size-4" /> Share
         </button>

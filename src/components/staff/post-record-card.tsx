@@ -21,6 +21,13 @@ function statusTone(status: PostRecord["postStatus"]): "warning" | "success" | "
   return "warning";
 }
 
+function itemStatusTone(status: PostRecord["itemStatus"]): "neutral" | "primary" | "success" | "warning" {
+  if (status === "Claimed" || status === "Returned") return "success";
+  if (status === "Lost") return "warning";
+  if (status === "Unclaimed") return "primary";
+  return "neutral";
+}
+
 export function PostRecordCard({
   record,
   onAction,
@@ -86,6 +93,7 @@ export function PostRecordCard({
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <PostTagChip label={record.postStatus} tone={statusTone(record.postStatus)} />
+        <PostTagChip label={record.itemStatus} tone={itemStatusTone(record.itemStatus)} />
         {record.category ? <PostTagChip label={record.category} tone="neutral" /> : null}
       </div>
 

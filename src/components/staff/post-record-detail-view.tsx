@@ -356,7 +356,8 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
     return <section className="grid h-full min-h-0 grid-cols-1 gap-4 overflow-y-auto pr-1"><div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"><div className="h-5 w-48 animate-pulse rounded-full bg-slate-200" /><div className="mt-4 h-24 animate-pulse rounded-2xl bg-slate-100" /></div><div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"><div className="h-6 w-64 animate-pulse rounded-full bg-slate-200" /><div className="mt-4 h-56 animate-pulse rounded-2xl bg-slate-100" /></div></section>;
   }
   if (!record) {
-    return <section className="grid h-full min-h-0 grid-cols-1 place-items-center gap-4 overflow-y-auto pr-1"><div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><h1 className="text-xl font-semibold text-slate-900">No record found</h1></div></section>;
+    const errorMessage = postQuery.error instanceof Error ? postQuery.error.message : "No record found";
+    return <section className="grid h-full min-h-0 grid-cols-1 place-items-center gap-4 overflow-y-auto pr-1"><div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><h1 className="text-xl font-semibold text-slate-900">{errorMessage}</h1></div></section>;
   }
 
   return (

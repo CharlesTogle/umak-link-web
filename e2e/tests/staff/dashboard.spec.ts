@@ -68,8 +68,6 @@ test.describe('Staff Dashboard', () => {
 
     // Look for filter buttons/tabs
     const lostFilter = page.locator('button:has-text("Lost"), button[aria-label*="Lost"]');
-    const foundFilter = page.locator('button:has-text("Found"), button[aria-label*="Found"]');
-
     // Filters may exist - test if they do
     if (await lostFilter.count().then((n) => n > 0)) {
       await lostFilter.first().click();

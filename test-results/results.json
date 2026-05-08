@@ -68,21 +68,21 @@
   },
   "suites": [
     {
-      "title": "staff/post-management.spec.ts",
-      "file": "staff/post-management.spec.ts",
+      "title": "staff/dashboard.spec.ts",
+      "file": "staff/dashboard.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Staff Post Management",
-          "file": "staff/post-management.spec.ts",
+          "title": "Staff Dashboard",
+          "file": "staff/dashboard.spec.ts",
           "line": 5,
           "column": 6,
           "specs": [
             {
-              "title": "sidebar claimed preset requests claimed records",
-              "ok": true,
+              "title": "staff match searches for similar items before notifying the owner",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -95,23 +95,121 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2731,
-                      "errors": [],
+                      "status": "failed",
+                      "duration": 13096,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Match' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Match' })\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Match' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Match' })\u001b[22m\n\n    at /home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts:167:63",
+                        "location": {
+                          "file": "/home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts",
+                          "column": 63,
+                          "line": 167
+                        },
+                        "snippet": "  165 |     await page.waitForLoadState('networkidle');\n  166 |\n> 167 |     await expect(page.getByRole('button', { name: 'Match' })).toBeVisible();\n      |                                                               ^\n  168 |     await page.getByRole('button', { name: 'Match' }).click();\n  169 |\n  170 |     await expect(page.getByText('1 possible match found; owner notified')).toBeVisible();"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts",
+                            "column": 63,
+                            "line": 167
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Match' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Match' })\u001b[22m\n\n\n  165 |     await page.waitForLoadState('networkidle');\n  166 |\n> 167 |     await expect(page.getByRole('button', { name: 'Match' })).toBeVisible();\n      |                                                               ^\n  168 |     await page.getByRole('button', { name: 'Match' }).click();\n  169 |\n  170 |     await expect(page.getByText('1 possible match found; owner notified')).toBeVisible();\n    at /home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts:167:63"
+                        }
+                      ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-07T14:38:34.008Z",
+                      "startTime": "2026-05-08T11:17:09.714Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/charles/Documents/Projects/umak-link/umak-link-web/test-results/staff-dashboard-Staff-Dash-23fe5--before-notifying-the-owner-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/charles/Documents/Projects/umak-link/umak-link-web/test-results/staff-dashboard-Staff-Dash-23fe5--before-notifying-the-owner-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/charles/Documents/Projects/umak-link/umak-link-web/test-results/staff-dashboard-Staff-Dash-23fe5--before-notifying-the-owner-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts",
+                        "column": 63,
+                        "line": 167
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 12665,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Match' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Match' })\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Match' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Match' })\u001b[22m\n\n    at /home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts:167:63",
+                        "location": {
+                          "file": "/home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts",
+                          "column": 63,
+                          "line": 167
+                        },
+                        "snippet": "  165 |     await page.waitForLoadState('networkidle');\n  166 |\n> 167 |     await expect(page.getByRole('button', { name: 'Match' })).toBeVisible();\n      |                                                               ^\n  168 |     await page.getByRole('button', { name: 'Match' }).click();\n  169 |\n  170 |     await expect(page.getByText('1 possible match found; owner notified')).toBeVisible();"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts",
+                            "column": 63,
+                            "line": 167
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Match' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Match' })\u001b[22m\n\n\n  165 |     await page.waitForLoadState('networkidle');\n  166 |\n> 167 |     await expect(page.getByRole('button', { name: 'Match' })).toBeVisible();\n      |                                                               ^\n  168 |     await page.getByRole('button', { name: 'Match' }).click();\n  169 |\n  170 |     await expect(page.getByText('1 possible match found; owner notified')).toBeVisible();\n    at /home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts:167:63"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-05-08T11:17:23.786Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/charles/Documents/Projects/umak-link/umak-link-web/test-results/staff-dashboard-Staff-Dash-23fe5--before-notifying-the-owner-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/charles/Documents/Projects/umak-link/umak-link-web/test-results/staff-dashboard-Staff-Dash-23fe5--before-notifying-the-owner-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/charles/Documents/Projects/umak-link/umak-link-web/test-results/staff-dashboard-Staff-Dash-23fe5--before-notifying-the-owner-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/charles/Documents/Projects/umak-link/umak-link-web/test-results/staff-dashboard-Staff-Dash-23fe5--before-notifying-the-owner-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/charles/Documents/Projects/umak-link/umak-link-web/e2e/tests/staff/dashboard.spec.ts",
+                        "column": 63,
+                        "line": 167
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "28a85d901c7618c93c33-de5e79f741e510ebdad4",
-              "file": "staff/post-management.spec.ts",
-              "line": 193,
+              "id": "7c48c46bf0d261ac206b-07e75f5a11f2bec79d84",
+              "file": "staff/dashboard.spec.ts",
+              "line": 54,
               "column": 7
             }
           ]
@@ -121,11 +219,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-05-07T14:38:29.359Z",
-    "duration": 8001.635000000001,
-    "expected": 1,
+    "startTime": "2026-05-08T11:17:08.671Z",
+    "duration": 28066.003,
+    "expected": 0,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 1,
     "flaky": 0
   }
 }

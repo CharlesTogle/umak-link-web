@@ -11,6 +11,7 @@ import {
   useDashboardStats,
 } from "@/hooks/queries/post-queries";
 import { shareLink } from "@/lib/share-link";
+import { matchMissingItem } from "@/services/search-service";
 import { updatePostStatus } from "@/services/posts-service";
 import { sendNotification } from "@/services/notifications-service";
 import {
@@ -211,19 +212,55 @@ export function StaffDashboardView() {
     });
 
     try {
-      await updatePostStatus(post.postId, { status: "accepted" });
-      await sendNotification({
-        user_id: post.posterId,
-        title: "Great News! A Possible Match to Your Item",
-        body: `We found items that may match your ${post.itemName}. Please proceed to the Security Office during office hours to verify.`,
-        description: "Please proceed to the Security Office during office hours.",
-        type: "match",
-        data: { postId: post.postId, itemId: post.itemId },
-        ...(post.imageUrl ? { image_url: post.imageUrl } : {}),
-      });
+      const matchResult = await matchMissingItem({ postId: post.postId });
+      if (!matchResult.success) {
+        throw new Error("Failed to find matches for the missing item");
+      }
 
+      await updatePostStatus(post.postId, { status: "accepted" });
       await dismissAndRefreshPost(post.postId);
-      pushToast("Possible match sent to owner", "success");
+
+      const matchedPostIds = matchResult.matches
+        .map((match) => {
+          const rawPostId = match.post_id ?? match.postId ?? match.postID ?? match.id;
+          if (typeof rawPostId === "number") return String(rawPostId);
+          if (typeof rawPostId === "string" && rawPostId.trim().length > 0) return rawPostId;
+          return null;
+        })
+        .filter((value): value is string => value !== null);
+      const totalMatches = matchResult.total_matches ?? matchedPostIds.length;
+
+      if (totalMatches === 0) {
+        pushToast("No possible matches found. Post approved.", "success");
+        return;
+      }
+
+      try {
+        await sendNotification({
+          user_id: post.posterId,
+          title: "Found Similar Items",
+          body: `We found ${totalMatches} similar ${totalMatches === 1 ? "item" : "items"} that might match your ${post.itemName}. Please proceed to the Security Office during office hours to verify.`,
+          description: "Please proceed to the Security Office during office hours.",
+          type: "match",
+          data: {
+            postId: post.postId,
+            ...(post.itemId ? { itemId: post.itemId } : {}),
+            ...(matchedPostIds.length > 0
+              ? { matched_post_ids: JSON.stringify(matchedPostIds) }
+              : {}),
+            match_count: totalMatches,
+          },
+          ...(post.imageUrl ? { image_url: post.imageUrl } : {}),
+        });
+        pushToast(
+          totalMatches === 1
+            ? "1 possible match found; owner notified"
+            : `${totalMatches} possible matches found; owner notified`,
+          "success"
+        );
+      } catch {
+        pushToast("Possible matches found, but failed to notify owner", "danger");
+      }
     } catch {
       pushToast("Failed to match missing item", "danger");
     } finally {

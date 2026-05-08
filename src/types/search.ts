@@ -37,6 +37,21 @@ export interface SearchItemsStaffApiResponse {
   results: SearchMatchRow[];
 }
 
+export interface MatchMissingItemRequest {
+  postId: string;
+}
+
+export interface MatchMissingItemApiRequest {
+  post_id: string;
+}
+
+export interface MatchMissingItemResponse {
+  success: boolean;
+  matches: SearchMatchRow[];
+  missing_post?: SearchMatchRow | null;
+  total_matches?: number;
+}
+
 export interface StaffSearchFilters {
   lastSeenDate: string;
   category: string;

@@ -4,6 +4,7 @@ export interface ApiPostRecord {
   poster_name: string | null;
   poster_id: string | null;
   poster_profile_picture_url?: string | null;
+  profile_picture_url?: string | null;
   item_name: string | null;
   item_description: string | null;
   item_type: "found" | "missing";
@@ -15,6 +16,15 @@ export interface ApiPostRecord {
   post_status: string | null;
   item_status: string | null;
   is_anonymous: boolean;
+  accepted_on_date?: string | null;
+  accepted_by_staff_name?: string | null;
+  accepted_by_staff_email?: string | null;
+  claim_id?: string | null;
+  claimed_by_name?: string | null;
+  claimed_by_email?: string | null;
+  claimed_by_contact?: string | null;
+  claimed_at?: string | null;
+  claim_processed_by_staff_id?: string | null;
 }
 
 export interface ApiPostListResponse {

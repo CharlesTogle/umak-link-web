@@ -1,5 +1,8 @@
 import { api } from "@/lib/api";
 import type {
+  MatchMissingItemApiRequest,
+  MatchMissingItemRequest,
+  MatchMissingItemResponse,
   ReverseImageQueryApiRequest,
   ReverseImageQueryRequest,
   ReverseImageQueryResponse,
@@ -31,6 +34,21 @@ export async function searchItemsStaff(params: SearchItemsStaffRequest): Promise
   const request = mapToApiRequest(params);
   const { data } = await api.post<SearchItemsStaffApiResponse>("/search/items/staff", request);
   return data.results ?? [];
+}
+
+function mapMatchMissingItemRequest(params: MatchMissingItemRequest): MatchMissingItemApiRequest {
+  return { post_id: params.postId };
+}
+
+export async function matchMissingItem(
+  params: MatchMissingItemRequest
+): Promise<MatchMissingItemResponse> {
+  const request = mapMatchMissingItemRequest(params);
+  const { data } = await api.post<MatchMissingItemResponse>("/search/match-missing-item", request);
+  return {
+    ...data,
+    matches: data.matches ?? [],
+  };
 }
 
 function mapReverseImageRequest(params: ReverseImageQueryRequest): ReverseImageQueryApiRequest {

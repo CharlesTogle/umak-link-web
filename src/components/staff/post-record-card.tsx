@@ -33,6 +33,7 @@ export function PostRecordCard({
   record: PostRecord;
   onAction: (action: PostRecordAction, record: PostRecord) => void;
 }) {
+  const displayName = record.isAnonymous ? "Anonymous" : record.username;
   const canNotify = record.itemType === "missing" && record.itemStatus === "Lost";
   const canClaim =
     record.itemType === "found" && record.itemStatus === "Unclaimed" && record.postStatus === "Accepted";
@@ -58,28 +59,24 @@ export function PostRecordCard({
       className="cursor-pointer rounded-3xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm transition hover:shadow-md"
     >
       <div className="mb-3 flex items-center justify-between gap-4">
-        <div className="text-sm text-slate-500">
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-flex size-7 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-slate-700">
-              {record.posterProfileUrl ? (
-                <Image
-                  src={record.posterProfileUrl}
-                  alt={record.isAnonymous ? "Anonymous user" : record.username}
-                  width={28}
-                  height={28}
-                  className="size-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <UserCircle2 className="size-4" />
-              )}
-            </span>
-            <span className="font-medium text-slate-700">
-              {formatRelativeTime(record.submissionDate, record.hoursAgo)}
-            </span>
+        <div className="flex min-w-0 items-center gap-2 text-sm text-slate-500">
+          <span className="inline-flex size-7 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-slate-700">
+            {record.posterProfileUrl ? (
+              <Image
+                src={record.posterProfileUrl}
+                alt={record.isAnonymous ? "Anonymous user" : record.username}
+                width={28}
+                height={28}
+                className="size-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <UserCircle2 className="size-4" />
+            )}
           </span>
-          <span className="mx-2 text-slate-300">•</span>
-          <span>{record.isAnonymous ? "Anonymous" : record.username}</span>
+          <span className="truncate font-medium text-slate-700">{displayName}</span>
+          <span className="text-slate-300">•</span>
+          <span className="whitespace-nowrap">{formatRelativeTime(record.submissionDate, record.hoursAgo)}</span>
         </div>
         <PostTagChip
           label={record.itemType === "missing" ? "Missing Item" : "Found Item"}

@@ -43,6 +43,7 @@ export function CompactPostCard({
   actionsDisabled?: boolean;
   loadingAction?: "accept" | "reject" | "notify" | null;
 }) {
+  const displayName = post.isAnonymous ? "Anonymous" : post.username;
   const router = useRouter();
   const isMissingItem = post.itemType === "lost";
   const showActions = post.postStatus === "Pending" && (onAccept || onReject || onNotifySimilar);
@@ -64,7 +65,7 @@ export function CompactPostCard({
       }}
       className="cursor-pointer rounded-3xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm transition hover:shadow-md"
     >
-      <div className="mb-3 flex items-center gap-2 text-sm text-slate-500">
+      <div className="mb-3 flex min-w-0 items-center gap-2 text-sm text-slate-500">
         <span className="inline-flex size-7 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-slate-700">
           {post.posterProfileUrl ? (
             <Image
@@ -79,7 +80,9 @@ export function CompactPostCard({
             <UserCircle2 className="size-4" />
           )}
         </span>
-        <span>{formatRelativeTime(post.submissionDate, post.hoursAgo)}</span>
+        <span className="truncate font-medium text-slate-700">{displayName}</span>
+        <span className="text-slate-300">•</span>
+        <span className="whitespace-nowrap">{formatRelativeTime(post.submissionDate, post.hoursAgo)}</span>
       </div>
 
       <h3 className="mb-3 text-xl font-semibold leading-tight text-slate-900">{post.title}</h3>

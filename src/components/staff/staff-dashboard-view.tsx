@@ -241,18 +241,19 @@ export function StaffDashboardView() {
       }
 
       try {
+        const matchNotificationMessage = `We've found ${totalMatches} likely ${
+          totalMatches === 1 ? "item" : "items"
+        } similar to your missing ${post.itemName}. You can go to the Security Office behind the Oval to inspect.`;
+
         await sendNotification({
           user_id: post.posterId,
           title: "Found Similar Items",
-          body: `We found ${totalMatches} similar ${totalMatches === 1 ? "item" : "items"} that might match your ${post.itemName}. Please proceed to the Security Office during office hours to verify.`,
-          description: "Please proceed to the Security Office during office hours.",
+          body: matchNotificationMessage,
+          description: matchNotificationMessage,
           type: "match",
           data: {
             postId: post.postId,
             ...(post.itemId ? { itemId: post.itemId } : {}),
-            ...(matchedPostIds.length > 0
-              ? { matched_post_ids: JSON.stringify(matchedPostIds) }
-              : {}),
             match_count: totalMatches,
           },
           ...(post.imageUrl ? { image_url: post.imageUrl } : {}),

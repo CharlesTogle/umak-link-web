@@ -25,6 +25,7 @@ export interface ApiPostRecord {
   claimed_by_contact?: string | null;
   claimed_at?: string | null;
   claim_processed_by_staff_id?: string | null;
+  custody_status?: ApiCustodyStatus | null;
 }
 
 export interface ApiPostListResponse {
@@ -42,6 +43,31 @@ export type ApiPostStatus =
   | "fraud";
 
 export type ApiItemStatus = "claimed" | "unclaimed" | "discarded" | "returned" | "lost";
+export type ApiCustodyStatus =
+  | "untracked"
+  | "with_reporter"
+  | "handover_in_progress"
+  | "with_guard"
+  | "in_security_office"
+  | "claimed_by_student"
+  | "under_investigation";
+
+export type ApiEditableClaimedCustodyStatus =
+  | "in_security_office"
+  | "under_investigation"
+  | "claimed_by_student";
+
+export type ApiCustodyHistoryEventType =
+  | "item_reported"
+  | "handover_attempted"
+  | "guard_rejected"
+  | "guard_accepted"
+  | "session_timed_out"
+  | "security_office_received"
+  | "attempt_cancelled"
+  | "under_investigation"
+  | "physical_take_reported"
+  | "claimed_by_student";
 
 export interface ApiPostRecordDetails {
   post_id: number | string;
@@ -76,4 +102,60 @@ export interface ApiPostRecordDetails {
   claim_processed_by_profile_picture_url: string | null;
   linked_lost_item_id: string | null;
   returned_at: string | null;
+  custody_status?: ApiCustodyStatus | null;
+}
+
+export interface ApiCustodyHistoryEntry {
+  history_id: string;
+  event_type: ApiCustodyHistoryEventType;
+  source_record_type: string | null;
+  message: string;
+  occurred_at: string;
+  custody_attempt_id: string | null;
+  qr_code_session_id: string | null;
+  attempt_number: number | null;
+  guard_post_id: string | null;
+  guard_post_name: string | null;
+  full_location_name: string | null;
+  handover_image_url: string | null;
+  actor_user_id: string | null;
+  actor_name: string | null;
+}
+
+export interface ApiCustodyHistoryResponse {
+  post_id: number;
+  item_id: string;
+  post_status: string | null;
+  custody_status: ApiCustodyStatus;
+  history: ApiCustodyHistoryEntry[];
+}
+
+export interface ApiSecurityOfficeReceiptResponse {
+  post_id: number;
+  custody_attempt_id: string;
+  custody_status: ApiCustodyStatus;
+  office_received_at: string;
+}
+
+export interface ApiOpenCustodyInvestigationResponse {
+  post_id: number;
+  custody_attempt_id: string;
+  custody_status: ApiCustodyStatus;
+  investigation_opened_at: string;
+}
+
+export interface ApiNotifyGuardResponse {
+  post_id: number;
+  custody_attempt_id: string;
+  guard_id: string;
+  notification_id: string | number;
+  notification_status: "created";
+  requested_at: string;
+}
+
+export interface ApiUpdateClaimedCustodyStatusResponse {
+  post_id: number;
+  item_id: string;
+  custody_status: ApiEditableClaimedCustodyStatus;
+  updated_at: string;
 }

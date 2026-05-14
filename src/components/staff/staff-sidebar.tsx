@@ -29,7 +29,8 @@ function isChildActive(pathname: string, searchParams: URLSearchParams, childHre
 
     return currentFilters.postStatus === childFilters.postStatus &&
       currentFilters.itemStatus === childFilters.itemStatus &&
-      currentFilters.itemType === childFilters.itemType;
+      currentFilters.itemType === childFilters.itemType &&
+      currentFilters.custodyStatus === childFilters.custodyStatus;
   }
 
   if (Array.from(childSearchParams.keys()).length === 0) {

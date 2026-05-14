@@ -57,6 +57,15 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
   const isLoadingLostItem = lostItemQuery.isFetching;
   const lostItemError = lostItemQuery.error instanceof Error ? lostItemQuery.error.message : null;
   const isSubmitting = claimMutation.isPending;
+  const claimBlockedMessage = post
+    ? normalizeValue(post.post_status) !== "accepted"
+      ? "This found post must be accepted before it can be claimed."
+      : normalizeValue(post.item_status) !== "unclaimed"
+        ? "This found post is no longer available for claim."
+        : normalizeValue(post.custody_status) !== "in_security_office"
+          ? "This found post cannot be claimed until the item is received in the Security Office."
+          : null
+    : null;
 
   const hasUnsavedChanges = useMemo(
     () => ui.selectedUser !== null || formData.contactNumber !== "" || formData.lostItemId !== "",
@@ -120,6 +129,19 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
     if (isSubmitting) return;
     if (!post || !ui.selectedUser) return showToast("Missing required information", "danger");
 
+    const latestPostResult = await postQuery.refetch();
+    const latestPost = latestPostResult.data;
+    if (
+      !latestPost ||
+      normalizeValue(latestPost.item_type) !== "found" ||
+      normalizeValue(latestPost.post_status) !== "accepted" ||
+      normalizeValue(latestPost.item_status) !== "unclaimed" ||
+      normalizeValue(latestPost.custody_status) !== "in_security_office"
+    ) {
+      showToast("This found post is not ready to be claimed.", "danger");
+      return;
+    }
+
     const normalized = normalizePhoneNumber(formData.contactNumber);
     if (!normalized) {
       return showToast("Please enter a valid Philippine mobile number (e.g., 09123456789, +639123456789)", "danger");
@@ -168,6 +190,10 @@ export function StaffClaimPostView({ postId }: { postId: string }) {
 
   if (!post) {
     return <section className="grid h-full min-h-0 grid-cols-1 place-items-center gap-4 overflow-y-auto pr-1"><div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><h1 className="text-xl font-semibold text-slate-900">Post not found or cannot be claimed</h1></div></section>;
+  }
+
+  if (claimBlockedMessage) {
+    return <section className="grid h-full min-h-0 grid-cols-1 place-items-center gap-4 overflow-y-auto pr-1"><div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><h1 className="text-xl font-semibold text-slate-900">Post not ready for claim</h1><p className="mt-2 text-sm text-slate-600">{claimBlockedMessage}</p></div></section>;
   }
 
   const isFormValid =

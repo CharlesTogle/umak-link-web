@@ -1,3 +1,5 @@
+import type { ApiCustodyStatus } from "@/types/post-record-api";
+
 export interface CompactPost {
   postId: string;
   posterId: string | null;
@@ -23,6 +25,7 @@ export interface CompactPost {
     | "Fraud"
     | "Deleted";
   itemStatus: "Lost" | "Found" | "Unclaimed" | "Claimed" | "Returned";
+  custodyStatus: ApiCustodyStatus | null;
   lastSeenLocation: string | null;
   lastSeenAt: string | null;
   submissionDate: string | null;

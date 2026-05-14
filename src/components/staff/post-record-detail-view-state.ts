@@ -1,4 +1,8 @@
-import type { ApiItemStatus, ApiPostStatus } from "@/types/post-record-api";
+import type {
+  ApiEditableClaimedCustodyStatus,
+  ApiItemStatus,
+  ApiPostStatus,
+} from "@/types/post-record-api";
 import type { ToastTone } from "@/types/ui";
 
 export interface PostRecordDetailUiState {
@@ -10,6 +14,7 @@ export interface PostRecordDetailUiState {
   showNotifyModal: boolean;
   selectedStatus: ApiPostStatus | null;
   selectedItemStatus: ApiItemStatus | null;
+  selectedCustodyStatus: ApiEditableClaimedCustodyStatus | null;
 }
 
 export type PostRecordDetailUiAction =
@@ -18,6 +23,7 @@ export type PostRecordDetailUiAction =
   | { type: "set_modal"; modal: "showStatusModal" | "showRejectModal" | "showUnclaimModal" | "showNotifyModal"; value: boolean }
   | { type: "set_selected_status"; value: ApiPostStatus | null }
   | { type: "set_selected_item_status"; value: ApiItemStatus | null }
+  | { type: "set_selected_custody_status"; value: ApiEditableClaimedCustodyStatus | null }
   | { type: "clear_selection" };
 
 export function postRecordDetailUiReducer(
@@ -35,7 +41,9 @@ export function postRecordDetailUiReducer(
       return { ...state, selectedStatus: action.value };
     case "set_selected_item_status":
       return { ...state, selectedItemStatus: action.value };
+    case "set_selected_custody_status":
+      return { ...state, selectedCustodyStatus: action.value };
     case "clear_selection":
-      return { ...state, selectedStatus: null, selectedItemStatus: null };
+      return { ...state, selectedStatus: null, selectedItemStatus: null, selectedCustodyStatus: null };
   }
 }

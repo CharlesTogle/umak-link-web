@@ -4,17 +4,22 @@ import { useCallback, useEffect, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import { PhotoProvider } from "react-photo-view";
 import { POST_REJECTION_REASONS } from "@/config/constants";
-import { useLinkedPost, usePostDetail } from "@/hooks/queries/post-queries";
+import { useLinkedPost, usePostCustodyHistory, usePostDetail } from "@/hooks/queries/post-queries";
 import { normalizeValue, toDisplayLabel } from "@/lib/format-utils";
 import { buildPostRejectionNotificationCopy } from "@/lib/post-rejection";
 import {
   getPostRecordStatusChangeDecision,
+  isEditableClaimedCustodyStatus,
   getPostRecordItemStatusOptions,
   isPostRecordItemStatusAllowed,
   isPostRecordPostStatusAllowed,
+  POST_RECORD_CLAIMED_CUSTODY_STATUS_OPTIONS,
   POST_RECORD_POST_STATUS_OPTIONS,
+  resolvePostRecordSelectedCustodyStatus,
   resolvePostRecordSelectedItemStatus,
   resolvePostRecordSelectedStatus,
+  shouldShowPostRecordClaimedCustodyOptions,
+  togglePostRecordCustodyStatusSelection,
   togglePostRecordItemStatusSelection,
   togglePostRecordStatusSelection,
 } from "@/lib/post-record-status-rules";
@@ -23,7 +28,14 @@ import { deleteClaimByItem } from "@/services/claims-service";
 import { sendNotification } from "@/services/notifications-service";
 import { updateItemStatus, updatePostStatus } from "@/services/posts-service";
 import {
+  markPostReceivedInSecurityOffice,
+  notifyGuardForCustodyFollowUp,
+  openPostCustodyInvestigation,
+  updateClaimedItemCustodyStatus,
+} from "@/services/staff-custody-service";
+import {
   LinkedPostPanel,
+  PostRecordCustodyPanel,
   PostRecordDetailHeader,
   PostRecordDetailsPanel,
   PostRecordMainPanel,
@@ -31,7 +43,11 @@ import {
 } from "@/components/staff/post-record-detail-view-sections";
 import { PostRecordModals } from "@/components/staff/post-record-detail-view-modals";
 import { postRecordDetailUiReducer } from "@/components/staff/post-record-detail-view-state";
-import type { ApiItemStatus, ApiPostStatus } from "@/types/post-record-api";
+import type {
+  ApiCustodyStatus,
+  ApiItemStatus,
+  ApiPostStatus,
+} from "@/types/post-record-api";
 import type { LinkedPostRecord, ToastTone } from "@/types/ui";
 
 function getStatusColor(status: string): string {
@@ -181,10 +197,14 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
     showNotifyModal: false,
     selectedStatus: null,
     selectedItemStatus: null,
+    selectedCustodyStatus: null,
   });
 
   const normalizedPostStatus = normalizeValue(record?.post_status) as ApiPostStatus;
   const normalizedItemStatus = normalizeValue(record?.item_status) as ApiItemStatus;
+  const normalizedCustodyStatus = normalizeValue(record?.custody_status) as ApiCustodyStatus;
+  const isFoundItem = normalizeValue(record?.item_type) === "found";
+  const custodyHistoryQuery = usePostCustodyHistory(postId, Boolean(record) && isFoundItem);
   const setToast = useCallback((message: string, tone: ToastTone) => {
     dispatchUi({ type: "set_toast", value: { message, tone } });
   }, []);
@@ -200,10 +220,41 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
   }, [postQuery.error, setToast]);
 
   const canNotifyOwner = record && normalizeValue(record.item_type) === "missing" && normalizedItemStatus === "lost";
+  const canNotifyGuard = Boolean(record && isFoundItem && normalizedCustodyStatus === "under_investigation");
+  const canReceiveInSecurityOffice = Boolean(
+    record &&
+      isFoundItem &&
+      (normalizedCustodyStatus === "with_guard" || normalizedCustodyStatus === "under_investigation")
+  );
+  const canOpenInvestigation = Boolean(record && isFoundItem && normalizedCustodyStatus === "with_guard");
   const canClaimItem =
-    record && normalizeValue(record.item_type) === "found" && normalizedItemStatus === "unclaimed" && normalizedPostStatus === "accepted";
+    Boolean(
+      record &&
+        isFoundItem &&
+        normalizedItemStatus === "unclaimed" &&
+        normalizedPostStatus === "accepted" &&
+        normalizedCustodyStatus === "in_security_office"
+    );
+  const pendingFoundDecisionAllowedForRecord =
+    !record ||
+    !isFoundItem ||
+    normalizedPostStatus !== "pending" ||
+    normalizedCustodyStatus === "in_security_office";
   const selectedStatus = resolvePostRecordSelectedStatus(normalizedPostStatus, ui.selectedStatus);
   const selectedItemStatus = resolvePostRecordSelectedItemStatus(normalizedItemStatus, ui.selectedItemStatus);
+  const selectedCustodyStatus = resolvePostRecordSelectedCustodyStatus(
+    normalizedCustodyStatus,
+    ui.selectedCustodyStatus
+  );
+  const showCustodyStatusSection = Boolean(
+    record &&
+      shouldShowPostRecordClaimedCustodyOptions(record.item_type, normalizedItemStatus)
+  );
+  const showItemStatusSection = !showCustodyStatusSection;
+  const statusHelpText =
+    record && isFoundItem && normalizedPostStatus === "pending" && normalizedCustodyStatus !== "in_security_office"
+      ? "Pending found posts can be accepted or rejected only after the item is marked as received in the Security Office."
+      : null;
 
   const performStatusChange = useCallback(async () => {
     if (!record || ui.isSubmitting) return;
@@ -222,6 +273,13 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
         }
         await updateItemStatus(record.item_id, { status: ui.selectedItemStatus });
       }
+      if (
+        showCustodyStatusSection &&
+        ui.selectedCustodyStatus &&
+        ui.selectedCustodyStatus !== normalizedCustodyStatus
+      ) {
+        await updateClaimedItemCustodyStatus(Number(record.post_id), ui.selectedCustodyStatus);
+      }
       await Promise.allSettled(
         buildStatusChangeNotifications({
           posterId: record.poster_id,
@@ -236,6 +294,9 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       );
       await postQuery.refetch();
       await linkedPostQuery.refetch();
+      if (isFoundItem) {
+        await custodyHistoryQuery.refetch();
+      }
       setToast("Status changed successfully.", "success");
       dispatchUi({ type: "set_modal", modal: "showStatusModal", value: false });
       dispatchUi({ type: "clear_selection" });
@@ -245,7 +306,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       dispatchUi({ type: "set_submitting", value: false });
       dispatchUi({ type: "set_modal", modal: "showUnclaimModal", value: false });
     }
-  }, [linkedPostQuery, normalizedItemStatus, normalizedPostStatus, postQuery, record, setToast, ui.isSubmitting, ui.selectedItemStatus, ui.selectedStatus]);
+  }, [custodyHistoryQuery, isFoundItem, linkedPostQuery, normalizedCustodyStatus, normalizedItemStatus, normalizedPostStatus, postQuery, record, setToast, showCustodyStatusSection, ui.isSubmitting, ui.selectedCustodyStatus, ui.selectedItemStatus, ui.selectedStatus]);
 
   const handleApplyStatusChange = async () => {
     if (!record) return;
@@ -253,6 +314,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       currentItemStatus: normalizedItemStatus,
       selectedPostStatus: ui.selectedStatus,
       selectedItemStatus: ui.selectedItemStatus,
+      selectedCustodyStatus: ui.selectedCustodyStatus,
     });
 
     if (decision.type === "missing_selection") {
@@ -261,7 +323,21 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
     }
 
     if (decision.type === "claim") {
+      if (!canClaimItem) {
+        setToast("Found items can be claimed only after Security Office receipt.", "danger");
+        return;
+      }
       router.push(`/staff/post/claim/${record.post_id}`);
+      return;
+    }
+
+    if (
+      isFoundItem &&
+      normalizedPostStatus === "pending" &&
+      (ui.selectedStatus === "accepted" || ui.selectedStatus === "rejected") &&
+      normalizedCustodyStatus !== "in_security_office"
+    ) {
+      setToast("Pending found posts can be accepted or rejected only after Security Office receipt.", "danger");
       return;
     }
 
@@ -282,6 +358,15 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
 
   const handleRejectWithReason = async (reason: string) => {
     if (!record || ui.isSubmitting) return;
+    if (
+      isFoundItem &&
+      normalizedPostStatus === "pending" &&
+      normalizedCustodyStatus !== "in_security_office"
+    ) {
+      setToast("Pending found posts can be accepted or rejected only after Security Office receipt.", "danger");
+      dispatchUi({ type: "set_modal", modal: "showRejectModal", value: false });
+      return;
+    }
     dispatchUi({ type: "set_submitting", value: true });
     try {
       await updatePostStatus(String(record.post_id), { status: "rejected", rejection_reason: reason });
@@ -291,6 +376,13 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
           await deleteClaimByItem(record.item_id);
         }
         await updateItemStatus(record.item_id, { status: ui.selectedItemStatus });
+      }
+      if (
+        showCustodyStatusSection &&
+        ui.selectedCustodyStatus &&
+        ui.selectedCustodyStatus !== normalizedCustodyStatus
+      ) {
+        await updateClaimedItemCustodyStatus(Number(record.post_id), ui.selectedCustodyStatus);
       }
       await Promise.allSettled(
         buildStatusChangeNotifications({
@@ -307,6 +399,9 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       );
       await postQuery.refetch();
       await linkedPostQuery.refetch();
+      if (isFoundItem) {
+        await custodyHistoryQuery.refetch();
+      }
       setToast("Status changed successfully.", "success");
       dispatchUi({ type: "clear_selection" });
     } catch (error) {
@@ -333,6 +428,51 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       setToast("Owner notified successfully!", "success");
     } catch {
       setToast("Failed to send notification to owner", "danger");
+    }
+  };
+
+  const handleReceiveInSecurityOffice = async () => {
+    if (!record || ui.isSubmitting) return;
+    dispatchUi({ type: "set_submitting", value: true });
+    try {
+      await markPostReceivedInSecurityOffice(Number(record.post_id));
+      await postQuery.refetch();
+      await linkedPostQuery.refetch();
+      await custodyHistoryQuery.refetch();
+      setToast("Item marked as received in the Security Office.", "success");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Failed to mark item as received", "danger");
+    } finally {
+      dispatchUi({ type: "set_submitting", value: false });
+    }
+  };
+
+  const handleOpenInvestigation = async () => {
+    if (!record || ui.isSubmitting) return;
+    dispatchUi({ type: "set_submitting", value: true });
+    try {
+      await openPostCustodyInvestigation(Number(record.post_id));
+      await postQuery.refetch();
+      await linkedPostQuery.refetch();
+      await custodyHistoryQuery.refetch();
+      setToast("Custody investigation opened.", "success");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Failed to open investigation", "danger");
+    } finally {
+      dispatchUi({ type: "set_submitting", value: false });
+    }
+  };
+
+  const handleNotifyGuard = async () => {
+    if (!record || ui.isSubmitting) return;
+    dispatchUi({ type: "set_submitting", value: true });
+    try {
+      await notifyGuardForCustodyFollowUp(Number(record.post_id));
+      setToast("Guard notified successfully.", "success");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Failed to notify guard", "danger");
+    } finally {
+      dispatchUi({ type: "set_submitting", value: false });
     }
   };
 
@@ -367,18 +507,24 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
 
   return (
     <PhotoProvider>
-      <section className="flex h-full min-h-0 flex-col gap-4 overflow-hidden pr-1">
+      <section className="grid h-full min-h-0 auto-rows-max grid-cols-1 gap-4 overflow-y-auto pr-1">
         <PostRecordDetailHeader
           canNotifyOwner={Boolean(canNotifyOwner)}
-          canClaimItem={Boolean(canClaimItem)}
+          canNotifyGuard={canNotifyGuard}
+          canClaimItem={canClaimItem}
+          canReceiveInSecurityOffice={canReceiveInSecurityOffice}
+          canOpenInvestigation={canOpenInvestigation}
           record={record}
           onBack={() => router.push("/staff/post-records")}
           onShare={() => void handleShare()}
           onNotify={() => dispatchUi({ type: "set_modal", modal: "showNotifyModal", value: true })}
+          onNotifyGuard={() => void handleNotifyGuard()}
           onClaim={() => router.push(`/staff/post/claim/${record.post_id}`)}
+          onReceiveInSecurityOffice={() => void handleReceiveInSecurityOffice()}
+          onOpenInvestigation={() => void handleOpenInvestigation()}
           onChangeStatus={() => dispatchUi({ type: "set_modal", modal: "showStatusModal", value: true })}
         />
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-12 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-12 lg:grid-rows-[auto_auto]">
           <PostRecordStatusPanel record={record} getStatusColor={getStatusColor} />
           <PostRecordMainPanel record={record} linkedPost={linkedPost} />
           {linkedPost ? (
@@ -393,6 +539,13 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
           ) : null}
           <PostRecordDetailsPanel record={record} normalizedItemStatus={normalizedItemStatus} />
         </div>
+        {isFoundItem ? (
+          <PostRecordCustodyPanel
+            history={custodyHistoryQuery.data ?? null}
+            isLoading={custodyHistoryQuery.isLoading}
+            errorMessage={custodyHistoryQuery.error instanceof Error ? custodyHistoryQuery.error.message : null}
+          />
+        ) : null}
         <PostRecordModals
           showStatusModal={ui.showStatusModal}
           showRejectModal={ui.showRejectModal}
@@ -401,11 +554,19 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
           isSubmitting={ui.isSubmitting}
           selectedStatus={selectedStatus}
           selectedItemStatus={selectedItemStatus}
+          selectedCustodyStatus={selectedCustodyStatus}
           postItemType={record.item_type}
           postStatusOptions={POST_RECORD_POST_STATUS_OPTIONS}
+          claimedCustodyStatusOptions={POST_RECORD_CLAIMED_CUSTODY_STATUS_OPTIONS}
           rejectReasons={POST_REJECTION_REASONS}
+          statusHelpText={statusHelpText}
+          showItemStatusSection={showItemStatusSection}
+          showCustodyStatusSection={showCustodyStatusSection}
           getStatusChipClass={getStatusChipClass}
-          isPostStatusAllowed={isPostRecordPostStatusAllowed}
+          isPostStatusAllowed={(postStatus, selectedItemStatus) =>
+            isPostRecordPostStatusAllowed(postStatus, selectedItemStatus) &&
+            ((postStatus !== "accepted" && postStatus !== "rejected") || pendingFoundDecisionAllowedForRecord)
+          }
           isItemStatusAllowed={isPostRecordItemStatusAllowed}
           getItemStatusOptions={getPostRecordItemStatusOptions}
           onSelectStatus={(value) =>
@@ -418,6 +579,15 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
             dispatchUi({
               type: "set_selected_item_status",
               value: togglePostRecordItemStatusSelection(normalizedItemStatus, value),
+            })
+          }
+          onSelectCustodyStatus={(value) =>
+            dispatchUi({
+              type: "set_selected_custody_status",
+              value: togglePostRecordCustodyStatusSelection(
+                isEditableClaimedCustodyStatus(normalizedCustodyStatus) ? normalizedCustodyStatus : null,
+                value
+              ),
             })
           }
           onCancelStatus={() => {

@@ -1,6 +1,16 @@
-import type { ApiItemStatus, ApiPostStatus } from "@/types/post-record-api";
+import type {
+  ApiCustodyStatus,
+  ApiEditableClaimedCustodyStatus,
+  ApiItemStatus,
+  ApiPostStatus,
+} from "@/types/post-record-api";
 
 export const POST_RECORD_POST_STATUS_OPTIONS: ApiPostStatus[] = ["pending", "accepted", "rejected"];
+export const POST_RECORD_CLAIMED_CUSTODY_STATUS_OPTIONS: ApiEditableClaimedCustodyStatus[] = [
+  "in_security_office",
+  "under_investigation",
+  "claimed_by_student",
+];
 
 export type PostRecordStatusChangeDecision =
   | { type: "missing_selection" }
@@ -9,8 +19,25 @@ export type PostRecordStatusChangeDecision =
   | { type: "confirm_unclaim" }
   | { type: "apply" };
 
+export function isEditableClaimedCustodyStatus(
+  custodyStatus: ApiCustodyStatus | null | undefined
+): custodyStatus is ApiEditableClaimedCustodyStatus {
+  return (
+    custodyStatus === "in_security_office" ||
+    custodyStatus === "under_investigation" ||
+    custodyStatus === "claimed_by_student"
+  );
+}
+
 export function getPostRecordItemStatusOptions(itemType: string | undefined): ApiItemStatus[] {
   return itemType === "found" ? ["claimed", "unclaimed", "discarded"] : ["returned", "lost"];
+}
+
+export function shouldShowPostRecordClaimedCustodyOptions(
+  itemType: string | undefined,
+  itemStatus: ApiItemStatus
+): boolean {
+  return itemType === "found" && itemStatus === "claimed";
 }
 
 export function isPostRecordItemStatusAllowed(
@@ -47,6 +74,14 @@ export function resolvePostRecordSelectedItemStatus(
   return selectedStatus ?? currentStatus;
 }
 
+export function resolvePostRecordSelectedCustodyStatus(
+  currentStatus: ApiCustodyStatus,
+  selectedStatus: ApiEditableClaimedCustodyStatus | null
+): ApiEditableClaimedCustodyStatus | null {
+  if (selectedStatus) return selectedStatus;
+  return isEditableClaimedCustodyStatus(currentStatus) ? currentStatus : null;
+}
+
 export function togglePostRecordStatusSelection(
   currentStatus: ApiPostStatus,
   nextStatus: ApiPostStatus
@@ -61,12 +96,20 @@ export function togglePostRecordItemStatusSelection(
   return nextStatus === currentStatus ? null : nextStatus;
 }
 
+export function togglePostRecordCustodyStatusSelection(
+  currentStatus: ApiEditableClaimedCustodyStatus | null,
+  nextStatus: ApiEditableClaimedCustodyStatus
+): ApiEditableClaimedCustodyStatus | null {
+  return nextStatus === currentStatus ? null : nextStatus;
+}
+
 export function getPostRecordStatusChangeDecision(params: {
   currentItemStatus: ApiItemStatus;
   selectedPostStatus: ApiPostStatus | null;
   selectedItemStatus: ApiItemStatus | null;
+  selectedCustodyStatus: ApiEditableClaimedCustodyStatus | null;
 }): PostRecordStatusChangeDecision {
-  if (!params.selectedPostStatus && !params.selectedItemStatus) {
+  if (!params.selectedPostStatus && !params.selectedItemStatus && !params.selectedCustodyStatus) {
     return { type: "missing_selection" };
   }
 

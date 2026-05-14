@@ -15,12 +15,13 @@ interface CreatePostRequest {
   p_item_type: "found" | "lost" | "missing";
   p_poster_id?: string;
   p_image_hash: string;
+  p_image_link: string;
   p_category?: string;
-  p_date_day?: number;
-  p_date_month?: number;
-  p_date_year?: number;
-  p_time_hour?: number;
-  p_time_minute?: number;
+  p_last_seen_date: string;
+  p_last_seen_hours: number;
+  p_last_seen_minutes: number;
+  p_item_status: "claimed" | "unclaimed" | "discarded" | "returned" | "lost";
+  p_post_status: "pending" | "accepted" | "rejected" | "archived" | "deleted" | "reported" | "fraud";
   p_location_path: LocationPathNode[];
   p_is_anonymous?: boolean;
 }
@@ -73,7 +74,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-async function uploadDisplayImage(image: File, userId: string): Promise<void> {
+async function uploadDisplayImage(image: File, userId: string): Promise<string> {
   const displayBlob = await makeDisplay(image);
   const fileName = `${userId}_${Date.now()}.webp`;
 
@@ -103,11 +104,13 @@ async function uploadDisplayImage(image: File, userId: string): Promise<void> {
     bucket: "items",
     objectPath: uploadData.objectPath,
   });
+
+  return uploadData.publicUrl;
 }
 
 export async function createStaffPost(input: CreateStaffPostInput): Promise<{ post_id: number }> {
   try {
-    await uploadDisplayImage(input.image, input.userId);
+    const imageLink = await uploadDisplayImage(input.image, input.userId);
     const imageHash = await computeBlockHash64(input.image);
     const lastSeenDate = extractPhilippineDateTimeParts(input.lastSeenISO);
 
@@ -122,11 +125,12 @@ export async function createStaffPost(input: CreateStaffPostInput): Promise<{ po
       p_item_type: "found",
       p_poster_id: input.userId,
       p_image_hash: imageHash,
-      p_date_day: lastSeenDate.day,
-      p_date_month: lastSeenDate.month,
-      p_date_year: lastSeenDate.year,
-      p_time_hour: lastSeenDate.hour,
-      p_time_minute: lastSeenDate.minute,
+      p_image_link: imageLink,
+      p_last_seen_date: `${String(lastSeenDate.year).padStart(4, "0")}-${String(lastSeenDate.month).padStart(2, "0")}-${String(lastSeenDate.day).padStart(2, "0")}`,
+      p_last_seen_hours: lastSeenDate.hour,
+      p_last_seen_minutes: lastSeenDate.minute,
+      p_item_status: "unclaimed",
+      p_post_status: "pending",
       p_location_path: locationPath,
       p_is_anonymous: false,
     };

@@ -1,22 +1,63 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, CircleUserRound, Copy, Handshake, Mail, RefreshCcw, Share2 } from "lucide-react";
+import { ArrowLeft, Bell, ChevronDown, CircleUserRound, Copy, Handshake, Mail, RefreshCcw, Share2, ShieldAlert, Warehouse } from "lucide-react";
 import { PhotoView } from "react-photo-view";
 import { StaffPosterName } from "@/components/staff/staff-poster-name";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { toDisplayLabel } from "@/lib/format-utils";
-import type { ApiItemStatus, ApiPostRecordDetails } from "@/types/post-record-api";
+import type { ApiCustodyHistoryEntry, ApiCustodyHistoryResponse, ApiCustodyStatus, ApiItemStatus, ApiPostRecordDetails } from "@/types/post-record-api";
 import type { LinkedPostRecord } from "@/types/ui";
+
+function formatCustodyStatusLabel(status: ApiCustodyStatus | null | undefined): string {
+  if (!status) return "Untracked";
+  return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getCustodyEventAccentClass(event: ApiCustodyHistoryEntry): string {
+  switch (event.event_type) {
+    case "guard_accepted":
+    case "claimed_by_student":
+      return "bg-emerald-500";
+    case "guard_rejected":
+    case "attempt_cancelled":
+    case "session_timed_out":
+      return "bg-rose-600";
+    case "handover_attempted":
+      return "bg-amber-500";
+    default:
+      return "bg-[#1D2981]";
+  }
+}
+
+function hasExpandableAttemptDetails(entry: ApiCustodyHistoryEntry): boolean {
+  return (
+    entry.event_type === "handover_attempted" &&
+    Boolean(
+      entry.attempt_number ||
+      entry.guard_post_name ||
+      entry.full_location_name ||
+      entry.actor_name ||
+      entry.handover_image_url
+    )
+  );
+}
 
 export function PostRecordDetailHeader(props: {
   canNotifyOwner: boolean;
+  canNotifyGuard: boolean;
   canClaimItem: boolean;
+  canReceiveInSecurityOffice: boolean;
+  canOpenInvestigation: boolean;
   record: ApiPostRecordDetails;
   onBack: () => void;
   onShare: () => void;
   onNotify: () => void;
+  onNotifyGuard: () => void;
   onClaim: () => void;
+  onReceiveInSecurityOffice: () => void;
+  onOpenInvestigation: () => void;
   onChangeStatus: () => void;
 }) {
   return (
@@ -32,6 +73,21 @@ export function PostRecordDetailHeader(props: {
           {props.canNotifyOwner ? (
             <button type="button" onClick={props.onNotify} className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 hover:bg-amber-100">
               <Mail className="size-4" /> Notify owner
+            </button>
+          ) : null}
+          {props.canReceiveInSecurityOffice ? (
+            <button type="button" onClick={props.onReceiveInSecurityOffice} className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-700 hover:bg-sky-100">
+              <Warehouse className="size-4" /> Mark received
+            </button>
+          ) : null}
+          {props.canOpenInvestigation ? (
+            <button type="button" onClick={props.onOpenInvestigation} className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 hover:bg-rose-100">
+              <ShieldAlert className="size-4" /> Open investigation
+            </button>
+          ) : null}
+          {props.canNotifyGuard ? (
+            <button type="button" onClick={props.onNotifyGuard} className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-700 hover:bg-sky-100">
+              <Bell className="size-4" /> Notify guard
             </button>
           ) : null}
           {props.canClaimItem ? (
@@ -60,6 +116,7 @@ export function PostRecordStatusPanel(props: { record: ApiPostRecordDetails; get
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">Item Status: {toDisplayLabel(props.record.item_status)}</span>
           <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">Item Type: {toDisplayLabel(props.record.item_type)}</span>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">Custody: {formatCustodyStatusLabel(props.record.custody_status ?? null)}</span>
         </div>
       </div>
     </article>
@@ -171,6 +228,7 @@ export function PostRecordDetailsPanel(props: { record: ApiPostRecordDetails; no
       <p className="mt-1 text-sm text-slate-600">Submission and acceptance information for this post.</p>
       <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-slate-600">
         <p><span className="font-medium text-slate-700">Item Type:</span> {toDisplayLabel(props.record.item_type)}</p>
+        <p><span className="font-medium text-slate-700">Custody Status:</span> {formatCustodyStatusLabel(props.record.custody_status ?? null)}</p>
         <p><span className="font-medium text-slate-700">Submitted:</span> {formatDateTimeInPhilippineTime(props.record.submitted_on_date_local, "Unknown")}</p>
         {props.record.accepted_on_date_local ? <p><span className="font-medium text-slate-700">Accepted:</span> {formatDateTimeInPhilippineTime(props.record.accepted_on_date_local)}</p> : null}
         {props.record.rejection_reason ? <p><span className="font-medium text-slate-700">Rejection reason:</span> {props.record.rejection_reason}</p> : null}
@@ -222,5 +280,145 @@ export function PostRecordDetailsPanel(props: { record: ApiPostRecordDetails; no
         </div>
       ) : null}
     </article>
+  );
+}
+
+export function PostRecordCustodyPanel(props: {
+  history: ApiCustodyHistoryResponse | null;
+  isLoading: boolean;
+  errorMessage: string | null;
+}) {
+  if (props.isLoading) {
+    return (
+      <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="animate-pulse space-y-3">
+          <div className="h-5 w-40 rounded-full bg-slate-200" />
+          <div className="h-4 w-64 rounded-full bg-slate-100" />
+          <div className="h-20 rounded-2xl bg-slate-100" />
+          <div className="h-20 rounded-2xl bg-slate-100" />
+        </div>
+      </article>
+    );
+  }
+
+  if (props.errorMessage) {
+    return (
+      <article className="rounded-3xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
+        <p className="text-sm font-semibold text-rose-700">Failed to load custody history.</p>
+        <p className="mt-1 text-sm text-rose-600">{props.errorMessage}</p>
+      </article>
+    );
+  }
+
+  if (!props.history) return null;
+
+  return (
+    <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-lg font-extrabold text-[#1D2981]">Custody Record</p>
+          <p className="text-sm text-slate-600">Poster-facing custody trail for this found item.</p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+          {formatCustodyStatusLabel(props.history.custody_status)}
+        </span>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {props.history.history.length === 0 ? (
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+            No custody events recorded yet.
+          </div>
+        ) : null}
+
+        {props.history.history.map((entry) => (
+          <PostRecordCustodyEntry key={entry.history_id} entry={entry} />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function PostRecordCustodyEntry(props: { entry: ApiCustodyHistoryEntry }) {
+  const { entry } = props;
+  const [expanded, setExpanded] = useState(false);
+  const canExpand = hasExpandableAttemptDetails(entry);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 p-4">
+      <div className="flex items-start gap-3">
+        <span className={`mt-1 h-3 w-3 rounded-full ${getCustodyEventAccentClass(entry)}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-900">{entry.message}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {formatDateTimeInPhilippineTime(entry.occurred_at, "Unknown")}
+              </p>
+              {entry.guard_post_name ? (
+                <p className="mt-2 text-xs text-slate-600">
+                  Guard post: {entry.full_location_name ?? entry.guard_post_name}
+                </p>
+              ) : null}
+            </div>
+
+            {canExpand ? (
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-label={expanded ? "Hide handover details" : "Show handover details"}
+                onClick={() => setExpanded((current) => !current)}
+                className="rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+              </button>
+            ) : null}
+          </div>
+
+          {expanded ? (
+            <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+              <div className="grid gap-2 text-xs text-slate-600 md:grid-cols-2">
+                {entry.attempt_number ? (
+                  <p>
+                    <span className="font-semibold text-slate-700">Attempt:</span> #{entry.attempt_number}
+                  </p>
+                ) : null}
+                {entry.guard_post_name ? (
+                  <p>
+                    <span className="font-semibold text-slate-700">Handover location:</span>{" "}
+                    {entry.full_location_name ?? entry.guard_post_name}
+                  </p>
+                ) : null}
+                {entry.actor_name ? (
+                  <p>
+                    <span className="font-semibold text-slate-700">Recorded by:</span> {entry.actor_name}
+                  </p>
+                ) : null}
+              </div>
+
+              {entry.handover_image_url ? (
+                <div className="mt-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Handover Image
+                  </p>
+                  <PhotoView src={entry.handover_image_url}>
+                    <div className="relative h-56 w-full cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-white md:h-72">
+                      <Image
+                        src={entry.handover_image_url}
+                        alt="Handover evidence"
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 720px"
+                      />
+                    </div>
+                  </PhotoView>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }

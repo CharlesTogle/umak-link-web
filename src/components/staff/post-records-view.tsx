@@ -7,6 +7,7 @@ import { flattenInfinitePages, usePostRecords } from "@/hooks/queries/post-queri
 import { buildPostRecordsUrl, getPostRecordFiltersFromSearchParams } from "@/lib/post-record-filters";
 import { shareLink } from "@/lib/share-link";
 import { sendNotification } from "@/services/notifications-service";
+import { notifyGuardForCustodyFollowUp } from "@/services/staff-custody-service";
 import {
   PostRecordsFeed,
   PostRecordsNotifyModal,
@@ -55,6 +56,14 @@ const filterGroups: Array<{
       { label: "Found", value: "found" },
     ],
   },
+  {
+    key: "custodyStatus",
+    label: "Custody Status",
+    options: [
+      { label: "All", value: "all" },
+      { label: "Under Investigation", value: "under_investigation" },
+    ],
+  },
 ];
 
 const sortOptions: Array<{ label: string; value: PostRecordSortDirection }> = [
@@ -71,6 +80,7 @@ export function PostRecordsView() {
   const [sortDir, setSortDir] = useState<PostRecordSortDirection>("desc");
   const [toast, setToast] = useState<{ message: string; tone: "success" | "danger" } | null>(null);
   const [pendingNotifyRecord, setPendingNotifyRecord] = useState<PostRecord | null>(null);
+  const [pendingNotifyGuardRecord, setPendingNotifyGuardRecord] = useState<PostRecord | null>(null);
   const lastNotifyTimeRef = useRef<Map<string, number>>(new Map());
   const feedRef = useRef<HTMLDivElement | null>(null);
 
@@ -78,10 +88,15 @@ export function PostRecordsView() {
     ...(filters.itemType !== "all" ? { itemType: filters.itemType } : {}),
     postStatus: filters.postStatus === "all" ? null : filters.postStatus.toLowerCase(),
     itemStatus: filters.itemStatus === "all" ? null : filters.itemStatus.toLowerCase(),
+    custodyStatus: filters.custodyStatus === "all" ? null : filters.custodyStatus,
     sortDirection: sortDir,
     pageSize: 10,
   });
   const records = flattenInfinitePages(recordsQuery.data?.pages);
+  const visibleRecords =
+    filters.custodyStatus === "all"
+      ? records
+      : records.filter((record) => record.custodyStatus === filters.custodyStatus);
 
   const updateFilters = (key: PostRecordFilterKey, value: PostRecordFilters[PostRecordFilterKey]) => {
     const newFilters = { ...filters, [key]: value };
@@ -94,6 +109,20 @@ export function PostRecordsView() {
     const timer = window.setTimeout(() => setToast(null), 3000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (filters.custodyStatus === "all") return;
+    if (visibleRecords.length >= 10) return;
+    if (!recordsQuery.hasNextPage || recordsQuery.isFetchingNextPage || recordsQuery.isLoading) return;
+    void recordsQuery.fetchNextPage();
+  }, [
+    filters.custodyStatus,
+    recordsQuery.fetchNextPage,
+    recordsQuery.hasNextPage,
+    recordsQuery.isFetchingNextPage,
+    recordsQuery.isLoading,
+    visibleRecords.length,
+  ]);
 
   const handleRefresh = async () => {
     await recordsQuery.refetch();
@@ -116,6 +145,11 @@ export function PostRecordsView() {
 
     if (action === "claim") {
       router.push(`/staff/post/claim/${record.postId}`);
+      return;
+    }
+
+    if (action === "notify-guard") {
+      setPendingNotifyGuardRecord(record);
       return;
     }
 
@@ -200,6 +234,24 @@ export function PostRecordsView() {
       });
   };
 
+  const handleConfirmNotifyGuard = () => {
+    if (!pendingNotifyGuardRecord) return;
+    const record = pendingNotifyGuardRecord;
+    notifyGuardForCustodyFollowUp(Number(record.postId))
+      .then(() => {
+        setToast({ message: "Guard notified successfully.", tone: "success" });
+      })
+      .catch((error) => {
+        setToast({
+          message: error instanceof Error ? error.message : "Failed to notify guard",
+          tone: "danger",
+        });
+      })
+      .finally(() => {
+        setPendingNotifyGuardRecord(null);
+      });
+  };
+
   const errorMessage = recordsQuery.error instanceof Error ? recordsQuery.error.message : null;
 
   return (
@@ -209,7 +261,7 @@ export function PostRecordsView() {
         onScroll={handleScroll}
         errorMessage={errorMessage}
         isLoading={recordsQuery.isLoading}
-        records={records}
+        records={visibleRecords}
         hasNextPage={recordsQuery.hasNextPage}
         onAction={handleAction}
       />
@@ -226,7 +278,20 @@ export function PostRecordsView() {
       />
 
       {toast ? <CustomToast message={toast.message} tone={toast.tone} mode="floating" /> : null}
-      <PostRecordsNotifyModal isOpen={Boolean(pendingNotifyRecord)} onCancel={() => setPendingNotifyRecord(null)} onConfirm={handleConfirmNotify} />
+      <PostRecordsNotifyModal
+        isOpen={Boolean(pendingNotifyRecord)}
+        title="Notify Owner"
+        description="Are you sure you want to notify the owner that similar items are in the security office?"
+        onCancel={() => setPendingNotifyRecord(null)}
+        onConfirm={handleConfirmNotify}
+      />
+      <PostRecordsNotifyModal
+        isOpen={Boolean(pendingNotifyGuardRecord)}
+        title="Notify Guard"
+        description="Are you sure you want to notify the guard assigned to follow up on this under-investigation item?"
+        onCancel={() => setPendingNotifyGuardRecord(null)}
+        onConfirm={handleConfirmNotifyGuard}
+      />
     </section>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { CheckCircle2, Share2, UserCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, Share2, UserCircle2, Warehouse, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StaffPosterName } from "@/components/staff/staff-poster-name";
 import { PostTagChip } from "@/components/staff/post-tag-chip";
@@ -22,10 +22,16 @@ function statusTone(status: CompactPost["postStatus"]): "warning" | "success" | 
   return "warning";
 }
 
+function formatCustodyStatusLabel(status: CompactPost["custodyStatus"]): string {
+  if (!status) return "Untracked";
+  return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export function CompactPostCard({
   post,
   onAccept,
   onReject,
+  onMarkReceived,
   onNotifySimilar,
   onShare,
   actionsDisabled = false,
@@ -34,14 +40,25 @@ export function CompactPostCard({
   post: CompactPost;
   onAccept?: (post: CompactPost) => void;
   onReject?: (post: CompactPost) => void;
+  onMarkReceived?: (post: CompactPost) => void;
   onNotifySimilar?: (post: CompactPost) => void;
   onShare?: (post: CompactPost) => void;
   actionsDisabled?: boolean;
-  loadingAction?: "accept" | "reject" | "notify" | null;
+  loadingAction?: "accept" | "reject" | "notify" | "receive" | null;
 }) {
   const router = useRouter();
   const isMissingItem = post.itemType === "lost";
-  const showActions = post.postStatus === "Pending" && (onAccept || onReject || onNotifySimilar);
+  const isPending = post.postStatus === "Pending";
+  const canApproveFoundPost =
+    post.itemType === "found" && post.custodyStatus === "in_security_office";
+  const canMarkReceived =
+    post.itemType === "found" &&
+    (post.custodyStatus === "with_guard" || post.custodyStatus === "under_investigation");
+  const showMissingItemActions = isPending && isMissingItem;
+  const showFoundApprovalActions = isPending && canApproveFoundPost;
+  const showMarkReceivedAction = isPending && canMarkReceived;
+  const showActions =
+    showMissingItemActions || showFoundApprovalActions || showMarkReceivedAction;
 
   const handleCardClick = () => {
     router.push(`/staff/post-record/view/${post.postId}`);
@@ -92,6 +109,9 @@ export function CompactPostCard({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <PostTagChip label={post.postStatus} tone={statusTone(post.postStatus)} />
         {post.category ? <PostTagChip label={post.category} tone="neutral" /> : null}
+        {post.itemType === "found" ? (
+          <PostTagChip label={`Custody: ${formatCustodyStatusLabel(post.custodyStatus)}`} tone="neutral" />
+        ) : null}
       </div>
 
       <h3 className="text-xl font-semibold leading-tight text-slate-900">{post.title}</h3>
@@ -127,51 +147,67 @@ export function CompactPostCard({
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {showActions ? (
             <>
-              <button
-                type="button"
-                disabled={actionsDisabled}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onAccept?.(post);
-                }}
-                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <CheckCircle2 className="size-4" />{" "}
-                {loadingAction === "accept"
-                  ? isMissingItem
-                    ? "Matching..."
-                    : "Approving..."
-                  : isMissingItem
-                    ? "Match"
-                    : "Approve"}
-              </button>
-              {isMissingItem ? (
+              {showMarkReceivedAction ? (
                 <button
                   type="button"
                   disabled={actionsDisabled}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onNotifySimilar?.(post);
+                    onMarkReceived?.(post);
                   }}
-                  className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1.5 text-sm text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <CheckCircle2 className="size-4" />{" "}
-                  {loadingAction === "notify"
-                    ? "Notifying..."
-                    : "Send Similar Item Notification"}
+                  <Warehouse className="size-4" /> {loadingAction === "receive" ? "Marking..." : "Mark Received"}
                 </button>
-              ) : null}
-              <button
-                type="button"
-                disabled={actionsDisabled}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onReject?.(post);
-                }}
-                className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <XCircle className="size-4" /> {loadingAction === "reject" ? "Rejecting..." : "Reject"}
-              </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={actionsDisabled}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAccept?.(post);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <CheckCircle2 className="size-4" />{" "}
+                    {loadingAction === "accept"
+                      ? isMissingItem
+                        ? "Matching..."
+                        : "Approving..."
+                      : isMissingItem
+                        ? "Match"
+                        : "Approve"}
+                  </button>
+                  {isMissingItem ? (
+                    <button
+                      type="button"
+                      disabled={actionsDisabled}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onNotifySimilar?.(post);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <CheckCircle2 className="size-4" />{" "}
+                      {loadingAction === "notify"
+                        ? "Notifying..."
+                        : "Send Similar Item Notification"}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={actionsDisabled}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onReject?.(post);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <XCircle className="size-4" /> {loadingAction === "reject" ? "Rejecting..." : "Reject"}
+                  </button>
+                </>
+              )}
             </>
           ) : null}
         </div>

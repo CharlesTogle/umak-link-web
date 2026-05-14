@@ -104,6 +104,7 @@ function mapPostToFallbackDetails(post: ApiPostRecord): ApiPostRecordDetails {
     item_status: post.item_status ?? "unclaimed",
     item_type: post.item_type,
     category: post.category,
+    custody_status: post.custody_status ?? null,
     poster_name: post.poster_name ?? "Unknown User",
     poster_email: "",
     poster_profile_picture_url:

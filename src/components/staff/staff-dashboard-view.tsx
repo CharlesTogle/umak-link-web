@@ -12,6 +12,7 @@ import {
 } from "@/hooks/queries/post-queries";
 import { buildPostRejectionNotificationCopy } from "@/lib/post-rejection";
 import { shareLink } from "@/lib/share-link";
+import { markPostReceivedInSecurityOffice } from "@/services/staff-custody-service";
 import { matchMissingItem } from "@/services/search-service";
 import { updatePostStatus } from "@/services/posts-service";
 import { sendNotification } from "@/services/notifications-service";
@@ -108,6 +109,13 @@ export function StaffDashboardView() {
     ]);
   };
 
+  const refreshDashboardPost = async () => {
+    await Promise.all([
+      dashboardPostsQuery.refetch(),
+      dashboardStatsQuery.refetch(),
+    ]);
+  };
+
   const handlePostDecision = async (
     post: CompactPost,
     decision: "accepted" | "rejected",
@@ -177,6 +185,11 @@ export function StaffDashboardView() {
   const handleAccept = (post: CompactPost) => {
     if (post.itemType === "lost") {
       void handleMatchMissingPost(post);
+      return;
+    }
+
+    if (post.custodyStatus !== "in_security_office") {
+      pushToast("Found posts can only be approved after Security Office receipt", "danger");
       return;
     }
 
@@ -269,6 +282,31 @@ export function StaffDashboardView() {
       }
     } catch {
       pushToast("Failed to match missing item", "danger");
+    } finally {
+      dispatchUi({ type: "finish_decision" });
+    }
+  };
+
+  const handleMarkReceived = async (post: CompactPost) => {
+    if (ui.isSubmittingDecision) return;
+    if (post.itemType !== "found") return;
+
+    dispatchUi({
+      type: "start_decision",
+      postId: post.postId,
+      decisionType: "receive",
+    });
+
+    try {
+      await markPostReceivedInSecurityOffice(Number(post.postId));
+      await refreshDashboardPost();
+      pushToast("Item marked as received in the Security Office", "success");
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "Failed to mark item as received in the Security Office";
+      pushToast(message, "danger");
     } finally {
       dispatchUi({ type: "finish_decision" });
     }
@@ -369,6 +407,7 @@ export function StaffDashboardView() {
         hasNextPage={dashboardPostsQuery.hasNextPage}
         onAccept={handleAccept}
         onReject={handleReject}
+        onMarkReceived={(post) => void handleMarkReceived(post)}
         onNotifySimilar={(post) => void handleNotifySimilar(post)}
         onShare={(post) => void handleShare(post)}
         pendingDecisionPostId={ui.pendingDecisionPostId}

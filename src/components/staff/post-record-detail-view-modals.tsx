@@ -2,7 +2,11 @@
 
 import { Overlay } from "@/components/ui/overlay";
 import { toDisplayLabel } from "@/lib/format-utils";
-import type { ApiItemStatus, ApiPostStatus } from "@/types/post-record-api";
+import type {
+  ApiEditableClaimedCustodyStatus,
+  ApiItemStatus,
+  ApiPostStatus,
+} from "@/types/post-record-api";
 
 export function PostRecordModals(props: {
   showStatusModal: boolean;
@@ -12,15 +16,21 @@ export function PostRecordModals(props: {
   isSubmitting: boolean;
   selectedStatus: ApiPostStatus | null;
   selectedItemStatus: ApiItemStatus | null;
+  selectedCustodyStatus: ApiEditableClaimedCustodyStatus | null;
   postItemType: string;
   postStatusOptions: ApiPostStatus[];
+  claimedCustodyStatusOptions: ApiEditableClaimedCustodyStatus[];
   rejectReasons: readonly string[];
+  statusHelpText?: string | null;
+  showItemStatusSection: boolean;
+  showCustodyStatusSection: boolean;
   getStatusChipClass: (active: boolean, disabled?: boolean) => string;
   isPostStatusAllowed: (postStatus: ApiPostStatus, selectedItemStatus: ApiItemStatus | null) => boolean;
   isItemStatusAllowed: (itemStatus: ApiItemStatus, selectedPostStatus: ApiPostStatus | null) => boolean;
   getItemStatusOptions: (itemType: string | undefined) => ApiItemStatus[];
   onSelectStatus: (value: ApiPostStatus) => void;
   onSelectItemStatus: (value: ApiItemStatus) => void;
+  onSelectCustodyStatus: (value: ApiEditableClaimedCustodyStatus) => void;
   onCancelStatus: () => void;
   onApplyStatusChange: () => void;
   onReject: (reason: string) => void;
@@ -36,9 +46,10 @@ export function PostRecordModals(props: {
         <Overlay>
           <div className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-lg">
             <h2 className="text-lg font-semibold text-slate-900">Update Post Status</h2>
-            <p className="mt-1 text-sm text-slate-600">Select post and item statuses to apply.</p>
+            <p className="mt-1 text-sm text-slate-600">Select the available post, item, and custody statuses to apply.</p>
             <div className="mt-4 border-t border-slate-200 pt-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Post Status</p>
+              {props.statusHelpText ? <p className="mb-3 text-sm text-amber-700">{props.statusHelpText}</p> : null}
               <div className="flex flex-wrap gap-2">
                 {props.postStatusOptions.map((status) => {
                   const allowed = props.isPostStatusAllowed(status, props.selectedItemStatus);
@@ -51,20 +62,37 @@ export function PostRecordModals(props: {
                 })}
               </div>
             </div>
-            <div className="mt-4 border-t border-slate-200 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Item Status</p>
-              <div className="flex flex-wrap gap-2">
-                {props.getItemStatusOptions(props.postItemType).map((status) => {
-                  const allowed = props.isItemStatusAllowed(status, props.selectedStatus);
-                  const active = props.selectedItemStatus === status;
-                  return (
-                    <button key={status} type="button" disabled={!allowed} onClick={() => props.onSelectItemStatus(status)} className={`rounded-full border px-3 py-1.5 text-sm transition ${props.getStatusChipClass(active, !allowed)}`}>
-                      {toDisplayLabel(status)}
-                    </button>
-                  );
-                })}
+            {props.showItemStatusSection ? (
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Item Status</p>
+                <div className="flex flex-wrap gap-2">
+                  {props.getItemStatusOptions(props.postItemType).map((status) => {
+                    const allowed = props.isItemStatusAllowed(status, props.selectedStatus);
+                    const active = props.selectedItemStatus === status;
+                    return (
+                      <button key={status} type="button" disabled={!allowed} onClick={() => props.onSelectItemStatus(status)} className={`rounded-full border px-3 py-1.5 text-sm transition ${props.getStatusChipClass(active, !allowed)}`}>
+                        {toDisplayLabel(status)}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : null}
+            {props.showCustodyStatusSection ? (
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Custody Status</p>
+                <div className="flex flex-wrap gap-2">
+                  {props.claimedCustodyStatusOptions.map((status) => {
+                    const active = props.selectedCustodyStatus === status;
+                    return (
+                      <button key={status} type="button" onClick={() => props.onSelectCustodyStatus(status)} className={`rounded-full border px-3 py-1.5 text-sm transition ${props.getStatusChipClass(active)}`}>
+                        {toDisplayLabel(status)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
             <ModalActions>
               <button type="button" onClick={props.onCancelStatus} className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
               <button type="button" disabled={props.isSubmitting} onClick={props.onApplyStatusChange} className="rounded-full bg-[#1D2981] px-4 py-2 text-sm font-medium text-white hover:bg-[#16206a] disabled:opacity-60">

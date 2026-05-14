@@ -9,6 +9,7 @@ export type PostRecordsSidebarFilter =
   | "claimed"
   | "unclaimed"
   | "lost"
+  | "under-investigation"
   | "pending"
   | "archived";
 
@@ -16,6 +17,7 @@ export const DEFAULT_POST_RECORD_FILTERS: PostRecordFilters = {
   postStatus: "all",
   itemStatus: "all",
   itemType: "all",
+  custodyStatus: "all",
 };
 
 function normalizePostStatus(value: string | null): PostRecordFilters["postStatus"] | null {
@@ -77,6 +79,20 @@ function normalizeItemType(value: string | null): PostRecordFilters["itemType"] 
   }
 }
 
+function normalizeCustodyStatus(value: string | null): PostRecordFilters["custodyStatus"] | null {
+  if (!value) return null;
+
+  switch (value.toLowerCase()) {
+    case "all":
+      return "all";
+    case "under_investigation":
+    case "under-investigation":
+      return "under_investigation";
+    default:
+      return null;
+  }
+}
+
 function getLegacySidebarFilters(filter: string | null): Partial<PostRecordFilters> {
   if (!filter) return {};
 
@@ -89,6 +105,9 @@ function getLegacySidebarFilters(filter: string | null): Partial<PostRecordFilte
       return { itemStatus: "Unclaimed" };
     case "lost":
       return { itemStatus: "Lost" };
+    case "under-investigation":
+    case "under_investigation":
+      return { custodyStatus: "under_investigation" };
     case "archived":
       return { postStatus: "Archived" };
     default:
@@ -103,6 +122,10 @@ export function getPostRecordFiltersFromSearchParams(searchParams: SearchParamsR
     postStatus: normalizePostStatus(searchParams.get("postStatus")) ?? legacyFilters.postStatus ?? "all",
     itemStatus: normalizeItemStatus(searchParams.get("itemStatus")) ?? legacyFilters.itemStatus ?? "all",
     itemType: normalizeItemType(searchParams.get("itemType")) ?? legacyFilters.itemType ?? "all",
+    custodyStatus:
+      normalizeCustodyStatus(searchParams.get("custodyStatus")) ??
+      legacyFilters.custodyStatus ??
+      "all",
   };
 }
 
@@ -119,6 +142,9 @@ export function buildPostRecordsUrl(filters: Partial<PostRecordFilters> = {}): s
   if (nextFilters.itemType !== "all") {
     params.set("itemType", nextFilters.itemType);
   }
+  if (nextFilters.custodyStatus !== "all") {
+    params.set("custodyStatus", nextFilters.custodyStatus);
+  }
 
   const query = params.toString();
   return query ? `/staff/post-records?${query}` : "/staff/post-records";
@@ -132,6 +158,8 @@ export function buildPostRecordsSidebarHref(filter: PostRecordsSidebarFilter): s
       return buildPostRecordsUrl({ itemStatus: "Unclaimed" });
     case "lost":
       return buildPostRecordsUrl({ itemStatus: "Lost" });
+    case "under-investigation":
+      return buildPostRecordsUrl({ custodyStatus: "under_investigation" });
     case "pending":
       return buildPostRecordsUrl({ postStatus: "Pending" });
     case "archived":

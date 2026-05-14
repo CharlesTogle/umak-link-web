@@ -24,6 +24,7 @@ interface DashboardFeedProps {
   hasNextPage?: boolean;
   onAccept: (post: CompactPost) => void;
   onReject: (post: CompactPost) => void;
+  onMarkReceived: (post: CompactPost) => void;
   onNotifySimilar: (post: CompactPost) => void;
   onShare: (post: CompactPost) => void;
   pendingDecisionPostId: string | null;
@@ -44,6 +45,7 @@ export function DashboardFeed({
   hasNextPage,
   onAccept,
   onReject,
+  onMarkReceived,
   onNotifySimilar,
   onShare,
   pendingDecisionPostId,
@@ -89,6 +91,7 @@ export function DashboardFeed({
             post={post}
             onAccept={onAccept}
             onReject={onReject}
+            onMarkReceived={onMarkReceived}
             onNotifySimilar={onNotifySimilar}
             onShare={onShare}
             actionsDisabled={pendingDecisionPostId === post.postId && isSubmittingDecision}

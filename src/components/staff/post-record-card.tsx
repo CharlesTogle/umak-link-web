@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Copy, Ellipsis, FileText, Handshake, Mail, Share2, UserCircle2 } from "lucide-react";
+import { Bell, Copy, Ellipsis, FileText, Handshake, Mail, Share2, UserCircle2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { StaffPosterName } from "@/components/staff/staff-poster-name";
 import { PostTagChip } from "@/components/staff/post-tag-chip";
@@ -28,6 +28,11 @@ function itemStatusTone(status: PostRecord["itemStatus"]): "neutral" | "primary"
   return "neutral";
 }
 
+function formatCustodyLabel(status: PostRecord["custodyStatus"]): string | null {
+  if (!status || status === "untracked") return null;
+  return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export function PostRecordCard({
   record,
   onAction,
@@ -36,10 +41,16 @@ export function PostRecordCard({
   onAction: (action: PostRecordAction, record: PostRecord) => void;
 }) {
   const canNotify = record.itemType === "missing" && record.itemStatus === "Lost";
+  const canNotifyGuard =
+    record.itemType === "found" && record.custodyStatus === "under_investigation";
   const canClaim =
-    record.itemType === "found" && record.itemStatus === "Unclaimed" && record.postStatus === "Accepted";
+    record.itemType === "found" &&
+    record.itemStatus === "Unclaimed" &&
+    record.postStatus === "Accepted" &&
+    record.custodyStatus === "in_security_office";
   const canCopyItemId =
     record.itemType === "missing" && record.postStatus === "Accepted" && record.itemStatus === "Lost" && record.itemId;
+  const custodyLabel = formatCustodyLabel(record.custodyStatus);
   const handleCardOpen = () => onAction("view", record);
   const handleActionClick = (action: PostRecordAction) => (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -94,6 +105,7 @@ export function PostRecordCard({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <PostTagChip label={record.postStatus} tone={statusTone(record.postStatus)} />
         <PostTagChip label={record.itemStatus} tone={itemStatusTone(record.itemStatus)} />
+        {custodyLabel ? <PostTagChip label={custodyLabel} tone="neutral" /> : null}
         {record.category ? <PostTagChip label={record.category} tone="neutral" /> : null}
       </div>
 
@@ -149,6 +161,15 @@ export function PostRecordCard({
               onClick={handleActionClick("claim")}
             >
               <Handshake className="size-4" /> Claim item
+            </button>
+          ) : null}
+          {canNotifyGuard ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1.5 text-sm text-sky-700 hover:bg-sky-100"
+              onClick={handleActionClick("notify-guard")}
+            >
+              <Bell className="size-4" /> Notify guard
             </button>
           ) : null}
           {canCopyItemId ? (

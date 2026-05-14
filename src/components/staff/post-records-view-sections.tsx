@@ -136,17 +136,25 @@ export function PostRecordsSidebar({
 
 interface PostRecordsNotifyModalProps {
   isOpen: boolean;
+  title: string;
+  description: string;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
-export function PostRecordsNotifyModal({ isOpen, onCancel, onConfirm }: PostRecordsNotifyModalProps) {
+export function PostRecordsNotifyModal({
+  isOpen,
+  title,
+  description,
+  onCancel,
+  onConfirm,
+}: PostRecordsNotifyModalProps) {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-lg">
-        <h2 className="text-lg font-semibold text-slate-900">Notify Owner</h2>
-        <p className="mt-2 text-sm text-slate-600">Are you sure you want to notify the owner that similar items are in the security office?</p>
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        <p className="mt-2 text-sm text-slate-600">{description}</p>
         <div className="mt-4 flex items-center justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
           <button type="button" onClick={onConfirm} className="rounded-full bg-[#1D2981] px-4 py-2 text-sm font-medium text-white hover:bg-[#16206a]">Confirm</button>

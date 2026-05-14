@@ -7,7 +7,7 @@ export interface DashboardToast {
   tone: CustomToastTone;
 }
 
-export type DashboardDecisionType = "accept" | "reject" | "notify";
+export type DashboardDecisionType = "accept" | "reject" | "notify" | "receive";
 
 export interface StaffDashboardUiState {
   toasts: DashboardToast[];

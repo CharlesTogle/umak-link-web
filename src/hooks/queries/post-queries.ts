@@ -2,9 +2,10 @@
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { mapPostToCompact, mapPostToRecord } from "@/lib/post-mappers";
+import { getPostCustodyHistory } from "@/services/custody-service";
 import { countPosts, getPostByItemDetails, getPostByItemId, getPostFull, listPosts } from "@/services/posts-service";
 import { fetchUnreadNotificationsCount } from "@/services/notifications-service";
-import type { ApiPostRecordDetails } from "@/types/post-record-api";
+import type { ApiCustodyHistoryResponse, ApiPostRecordDetails } from "@/types/post-record-api";
 import type { DashboardPostsParams, PostRecordsParams } from "@/types/post-query";
 import { normalizeValue } from "@/lib/format-utils";
 
@@ -15,6 +16,7 @@ export const postKeys = {
   dashboardStats: ["posts", "dashboard-stats"] as const,
   records: (params: PostRecordsParams) => ["posts", "records", params] as const,
   detail: (postId: string) => ["posts", "detail", postId] as const,
+  custodyHistory: (postId: string) => ["posts", "custody-history", postId] as const,
   linked: (postId: string, record: ApiPostRecordDetails | null) =>
     [
       "posts",
@@ -113,6 +115,14 @@ export function usePostDetail(postId: string) {
     queryKey: postKeys.detail(postId),
     queryFn: () => getPostFull(postId),
     enabled: Boolean(postId),
+  });
+}
+
+export function usePostCustodyHistory(postId: string, enabled = true) {
+  return useQuery<ApiCustodyHistoryResponse>({
+    queryKey: postKeys.custodyHistory(postId),
+    queryFn: () => getPostCustodyHistory(postId),
+    enabled: Boolean(postId) && enabled,
   });
 }
 

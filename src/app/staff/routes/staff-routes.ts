@@ -41,6 +41,7 @@ export const staffPrimaryRoutes: StaffRouteGroup[] = [
       { label: "All Records", href: buildPostRecordsSidebarHref("all") },
       { label: "Claimed", href: buildPostRecordsSidebarHref("claimed") },
       { label: "Unclaimed", href: buildPostRecordsSidebarHref("unclaimed") },
+      { label: "Under Investigation", href: buildPostRecordsSidebarHref("under-investigation") },
       { label: "Missing", href: buildPostRecordsSidebarHref("lost") },
     ],
   },

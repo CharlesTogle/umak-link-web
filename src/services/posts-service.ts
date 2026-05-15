@@ -117,6 +117,7 @@ function mapPostToFallbackDetails(post: ApiPostRecord): ApiPostRecordDetails {
     claim_processed_by_name: null,
     claim_processed_by_email: null,
     claim_processed_by_profile_picture_url: null,
+    claim_processed_by_user_type: null,
     linked_lost_item_id: null,
     returned_at: null,
   };

@@ -100,6 +100,7 @@ export interface ApiPostRecordDetails {
   claim_processed_by_name: string | null;
   claim_processed_by_email: string | null;
   claim_processed_by_profile_picture_url: string | null;
+  claim_processed_by_user_type?: "User" | "Staff" | "Admin" | "Guard" | null;
   linked_lost_item_id: string | null;
   returned_at: string | null;
   custody_status?: ApiCustodyStatus | null;

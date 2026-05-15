@@ -15,6 +15,15 @@ function formatCustodyStatusLabel(status: ApiCustodyStatus | null | undefined): 
   return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function formatClaimProcessedByName(
+  name: string | null,
+  userType?: "User" | "Staff" | "Admin" | "Guard" | null
+): string {
+  const normalizedName = name?.trim() ?? "";
+  if (!normalizedName) return "";
+  return userType === "Guard" ? `Guard ${normalizedName}` : normalizedName;
+}
+
 function getCustodyEventAccentClass(event: ApiCustodyHistoryEntry): string {
   switch (event.event_type) {
     case "guard_accepted":
@@ -271,7 +280,12 @@ export function PostRecordDetailsPanel(props: { record: ApiPostRecordDetails; no
                   )}
                 </div>
                 <div>
-                  <p className="font-medium text-slate-800">{props.record.claim_processed_by_name}</p>
+                  <p className="font-medium text-slate-800">
+                    {formatClaimProcessedByName(
+                      props.record.claim_processed_by_name,
+                      props.record.claim_processed_by_user_type ?? null
+                    )}
+                  </p>
                   <p className="text-xs text-slate-500">{props.record.claim_processed_by_email}</p>
                 </div>
               </div>

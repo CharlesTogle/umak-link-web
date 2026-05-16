@@ -1,7 +1,9 @@
 "use client";
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { isApiNotFoundError } from "@/lib/api-errors";
 import { mapPostToCompact, mapPostToRecord } from "@/lib/post-mappers";
+import { extractSharedPostRecordId } from "@/lib/post-record-link";
 import { getPostCustodyHistory } from "@/services/custody-service";
 import { countPosts, getPostByItemDetails, getPostByItemId, getPostFull, listPosts } from "@/services/posts-service";
 import { fetchUnreadNotificationsCount } from "@/services/notifications-service";
@@ -10,6 +12,17 @@ import type { DashboardPostsParams, PostRecordsParams } from "@/types/post-query
 import { normalizeValue } from "@/lib/format-utils";
 
 export const POSTS_PAGE_SIZE = 10;
+const NUMERIC_POST_ID_PATTERN = /^\d+$/;
+const LOST_POST_NOT_FOUND_MESSAGE =
+  "Lost post not found. Paste a shared post link or enter a valid Item ID.";
+const LOST_POST_INVALID_REFERENCE_MESSAGE =
+  "The reference must point to a missing/lost item post.";
+const LOST_POST_DISCARDED_MESSAGE =
+  "This item cannot be linked because it was discarded.";
+const LOST_POST_RETURNED_MESSAGE =
+  "This item has already been returned and cannot be linked.";
+const LOST_POST_INVALID_STATUS_MESSAGE =
+  "This post cannot be linked unless it is pending or accepted.";
 
 export const postKeys = {
   dashboard: (params: DashboardPostsParams) => ["posts", "dashboard", params] as const,
@@ -162,11 +175,65 @@ export function useLostItemLookup(itemId: string) {
     queryKey: postKeys.lostItem(trimmedItemId),
     enabled: Boolean(trimmedItemId),
     queryFn: async () => {
-      const lostPost = await getPostByItemDetails(trimmedItemId);
-      if (normalizeValue(lostPost.item_type) !== "missing") {
-        throw new Error("Item ID must be a missing/lost item post");
+      const validateLostPost = (lostPost: ApiPostRecordDetails) => {
+        if (normalizeValue(lostPost.item_type) !== "missing") {
+          throw new Error(LOST_POST_INVALID_REFERENCE_MESSAGE);
+        }
+
+        const normalizedLostPostItemStatus = normalizeValue(lostPost.item_status);
+        const normalizedLostPostStatus = normalizeValue(lostPost.post_status);
+
+        if (normalizedLostPostItemStatus === "discarded") {
+          throw new Error(LOST_POST_DISCARDED_MESSAGE);
+        }
+
+        if (normalizedLostPostItemStatus === "returned") {
+          throw new Error(LOST_POST_RETURNED_MESSAGE);
+        }
+
+        if (
+          normalizedLostPostStatus !== "accepted" &&
+          normalizedLostPostStatus !== "pending"
+        ) {
+          throw new Error(LOST_POST_INVALID_STATUS_MESSAGE);
+        }
+
+        return lostPost;
+      };
+
+      const sharedPostId = extractSharedPostRecordId(trimmedItemId);
+
+      if (sharedPostId) {
+        try {
+          return validateLostPost(await getPostFull(sharedPostId));
+        } catch (error) {
+          if (isApiNotFoundError(error)) {
+            throw new Error(LOST_POST_NOT_FOUND_MESSAGE);
+          }
+
+          throw error;
+        }
       }
-      return lostPost;
+
+      if (NUMERIC_POST_ID_PATTERN.test(trimmedItemId)) {
+        try {
+          return validateLostPost(await getPostFull(trimmedItemId));
+        } catch (error) {
+          if (!isApiNotFoundError(error)) {
+            throw error;
+          }
+        }
+      }
+
+      try {
+        return validateLostPost(await getPostByItemDetails(trimmedItemId));
+      } catch (error) {
+        if (isApiNotFoundError(error)) {
+          throw new Error(LOST_POST_NOT_FOUND_MESSAGE);
+        }
+
+        throw error;
+      }
     },
   });
 }

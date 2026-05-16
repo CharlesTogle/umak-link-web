@@ -7,7 +7,7 @@ import {
   Check,
   CircleUserRound,
   Clock,
-  Mail,
+  Link2,
   Phone,
   QrCode,
   ScanLine,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { PhotoView } from "react-photo-view";
 import { Overlay } from "@/components/ui/overlay";
+import { PostRecordPreviewCard } from "@/components/staff/post-record-preview-card";
 import type {
   ClaimFormData,
   SelectedUser,
@@ -457,6 +458,8 @@ export function ClaimSidebar(props: {
   manualName: string;
   manualEmail: string;
   formData: ClaimFormData;
+  lostItemPost: ApiPostRecordDetails | null;
+  lostItemWarning: string | null;
   isLoadingLostItem: boolean;
   lostItemError: string | null;
   onToggleManualInput: () => void;
@@ -467,6 +470,7 @@ export function ClaimSidebar(props: {
   onManualEmailChange: (value: string) => void;
   onSubmitManual: () => void;
   onFieldChange: (key: keyof ClaimFormData, value: string) => void;
+  onViewLostItemPost: () => void;
   verificationPanel: ReactNode;
 }) {
   const isGuardMode = props.mode === "guard";
@@ -648,21 +652,36 @@ export function ClaimSidebar(props: {
       {!isGuardMode ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#1D2981]">
-            <Mail className="size-4" />
-            Lost Item ID (Optional)
+            <Link2 className="size-4" />
+            Lost Post Link or Item ID (Optional)
           </label>
           <input
             type="text"
             value={props.formData.lostItemId}
             onChange={(event) => props.onFieldChange("lostItemId", event.target.value)}
-            placeholder="Enter Item ID if linking to lost post"
+            placeholder="Paste a shared post link or enter an Item ID"
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#1D2981]/30"
           />
+          <p className="mt-1 text-xs text-slate-500">
+            Paste the lost post link from Share, or enter the lost item&apos;s Item ID.
+          </p>
           {props.isLoadingLostItem ? (
             <p className="mt-2 text-xs text-slate-500">Loading lost item...</p>
           ) : null}
           {props.lostItemError ? (
             <p className="mt-2 text-xs text-rose-600">{props.lostItemError}</p>
+          ) : null}
+          {props.lostItemWarning ? (
+            <p className="mt-2 text-xs text-amber-700">{props.lostItemWarning}</p>
+          ) : null}
+          {props.lostItemPost ? (
+            <PostRecordPreviewCard
+              sectionLabel="Linked Lost Item"
+              post={props.lostItemPost}
+              actionLabel="View post record"
+              className="mt-3"
+              onAction={props.onViewLostItemPost}
+            />
           ) : null}
         </div>
       ) : null}

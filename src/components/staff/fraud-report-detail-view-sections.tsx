@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowLeft, CircleUserRound, ShieldAlert } from "lucide-react";
+import { ArrowLeft, CircleUserRound } from "lucide-react";
 import { PhotoView } from "react-photo-view";
 import { Overlay } from "@/components/ui/overlay";
+import { PostRecordPreviewCard } from "@/components/staff/post-record-preview-card";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { toDisplayLabel } from "@/lib/format-utils";
 import type { ApiFraudReportPublic } from "@/types/fraud-report-api";
@@ -90,55 +91,28 @@ export function FraudReportMainPanel(props: {
       <h1 className="text-xl font-bold text-slate-900">{props.reason}</h1>
       {props.details ? <p className="mt-2 text-sm text-slate-600">{props.details}</p> : null}
 
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <p className="mb-2 text-sm font-semibold text-[#1D2981]">Reported Item</p>
-        <div className="flex flex-wrap gap-4">
-          <div className="relative h-36 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white">
-            {report.item_image_url ? (
-              <PhotoView src={report.item_image_url}>
-                <div className="relative h-full w-full cursor-zoom-in">
-                  <Image src={report.item_image_url} alt={report.item_name ?? "Reported item"} fill unoptimized className="object-cover" sizes="208px" />
-                </div>
-              </PhotoView>
-            ) : (
-              <div className="flex h-full items-center justify-center text-xs text-slate-400">No image</div>
-            )}
-          </div>
-          <div className="min-w-[220px] flex-1 text-sm text-slate-600">
-            <p className="text-lg font-semibold text-slate-900">{report.item_name ?? "Unknown Item"}</p>
-            <p className="mt-1">{report.item_description ?? "No description provided."}</p>
-            <p className="mt-2 text-xs text-slate-500"><span className="font-medium text-slate-700">Poster:</span> {report.poster_name ?? "Unknown User"}</p>
-            <button type="button" onClick={props.onViewPostRecord} className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50">
-              <ShieldAlert className="size-3.5" /> View post record
-            </button>
-          </div>
-        </div>
-      </div>
+      <PostRecordPreviewCard
+        sectionLabel="Reported Item"
+        post={{
+          is_anonymous: Boolean(report.is_anonymous),
+          item_name: report.item_name ?? "Unknown Item",
+          item_description: report.item_description ?? null,
+          item_image_url: report.item_image_url ?? null,
+          poster_name: report.poster_name ?? "Unknown User",
+        }}
+        actionLabel="View post record"
+        className="mt-4"
+        onAction={props.onViewPostRecord}
+      />
 
       {linkedMissingItem ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-          <p className="mb-2 text-sm font-semibold text-[#1D2981]">Linked Missing Item</p>
-          <div className="flex flex-wrap gap-4">
-            <div className="relative h-36 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white">
-              {linkedMissingItem.item_image_url ? (
-                <PhotoView src={linkedMissingItem.item_image_url}>
-                  <div className="relative h-full w-full cursor-zoom-in">
-                    <Image src={linkedMissingItem.item_image_url} alt={linkedMissingItem.item_name} fill unoptimized className="object-cover" sizes="208px" />
-                  </div>
-                </PhotoView>
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-slate-400">No image</div>
-              )}
-            </div>
-            <div className="min-w-[220px] flex-1 text-sm text-slate-600">
-              <p className="text-lg font-semibold text-slate-900">{linkedMissingItem.item_name}</p>
-              <p className="mt-1">{linkedMissingItem.item_description ?? "No description provided."}</p>
-              <button type="button" onClick={props.onViewLinkedItem} className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50">
-                <ShieldAlert className="size-3.5" /> View linked item
-              </button>
-            </div>
-          </div>
-        </div>
+        <PostRecordPreviewCard
+          sectionLabel="Linked Missing Item"
+          post={linkedMissingItem}
+          actionLabel="View linked item"
+          className="mt-4"
+          onAction={props.onViewLinkedItem}
+        />
       ) : null}
 
       {report.proof_image_url ? (

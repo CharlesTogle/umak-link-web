@@ -281,6 +281,12 @@ export function ProcessorClaimPostView({
     !isGuardMode && lostItemQuery.error instanceof Error
       ? lostItemQuery.error.message
       : null;
+  const lostItemWarning =
+    !isGuardMode &&
+    lostItemPost &&
+    normalizeValue(lostItemPost.post_status) === "pending"
+      ? "This linked lost item post is still pending. It will be accepted automatically when you submit the claim."
+      : null;
   const isSubmitting = claimMutation.isPending;
   const isVerifyingClaimer = scanMutation.isPending;
 
@@ -428,7 +434,8 @@ export function ProcessorClaimPostView({
 
     if (!isGuardMode && formData.lostItemId.trim() && !lostItemPost) {
       showToast(
-        "Referenced lost item not found. Please verify the Item ID.",
+        lostItemError ??
+          "Referenced lost post not found. Please verify the shared link or Item ID.",
         "danger"
       );
       return;
@@ -612,6 +619,8 @@ export function ProcessorClaimPostView({
             manualName={ui.manualName}
             manualEmail={ui.manualEmail}
             formData={formData}
+            lostItemPost={lostItemPost}
+            lostItemWarning={lostItemWarning}
             isLoadingLostItem={Boolean(isLoadingLostItem)}
             lostItemError={lostItemError}
             onToggleManualInput={() => dispatchUi({ type: "toggle_manual_input" })}
@@ -633,6 +642,11 @@ export function ProcessorClaimPostView({
             onFieldChange={(key, value) =>
               dispatchForm({ type: "set_field", key, value })
             }
+            onViewLostItemPost={() => {
+              if (lostItemPost) {
+                router.push(`/staff/post-record/view/${lostItemPost.post_id}`);
+              }
+            }}
             verificationPanel={
               <ClaimVerificationPanel
                 joinCode={isGuardMode ? sessionStatus?.join_code ?? null : null}

@@ -184,19 +184,19 @@ function generateFraudReportAcceptedEmail(params: {
     <div class="header">
       <h1>⚠️ Item Claim Report - Action Required</h1>
     </div>
-    
+
     <div class="content">
       <h2>Dear ${claimerName},</h2>
-      
+
       <p>We are writing to inform you that an item you claimed through the UMak-LINK Lost and Found System has been reported as a fraudulent claim.</p>
-      
+
       <div class="info-box">
         <p><span class="info-label">Claimed Item:</span> ${postTitle}</p>
         <p><span class="info-label">Reported By:</span> ${reporterName}</p>
         <p><span class="info-label">Reviewed By:</span> ${staffName}</p>
         <p><span class="info-label">Date Reviewed:</span> ${acceptedDate}</p>
       </div>
-      
+
       <div class="urgent-box">
         <p><strong>IMMEDIATE ACTION REQUIRED</strong></p>
         <p>Your presence is requested to address this matter and provide verification of your claim.</p>
@@ -210,28 +210,28 @@ function generateFraudReportAcceptedEmail(params: {
           University of Makati
         </p>
       </div>
-      
+
       <div class="alert-box">
         <p><strong>Important Deadline:</strong></p>
         <p>You must report to the Security Office <strong>within one (1) week</strong> from the date of this email. Failure to appear within this timeframe will result in your case being escalated to the <strong>UMak Community Standards and Formation Department (CSFD)</strong> for further disciplinary action.</p>
       </div>
-      
+
       <p><strong>What to bring:</strong></p>
       <ul style="margin: 10px 0; padding-left: 20px;">
         <li>Valid University ID</li>
         <li>Any proof of ownership for the claimed item</li>
         <li>This email notification (digital or printed)</li>
       </ul>
-      
+
       <p>We take fraudulent claims very seriously as they undermine the integrity of our lost and found system and prevent items from being returned to their rightful owners.</p>
-      
+
       <p style="margin-top: 30px;">If you have any questions or concerns, please contact the UMak Security Office directly.</p>
-      
+
       <p style="margin-top: 30px;">Respectfully,<br>
       <strong>UMak Security Office</strong><br>
       University of Makati</p>
     </div>
-    
+
     <div class="footer">
       <p class="no-reply">⚠️ This is a no-reply email. Please do not respond to this message.</p>
       <p>For inquiries, please visit the UMak Security Office behind the Oval Stadium.</p>

@@ -2,18 +2,34 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Plus, RefreshCw, Megaphone, Image as ImageIcon } from "lucide-react";
+import { ChevronDown, Plus, RefreshCw, Megaphone, Image as ImageIcon, Download } from "lucide-react";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CustomToast, type CustomToastTone } from "@/components/ui/custom-toast";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { downloadCsvFile } from "@/lib/audit-log-utils";
+import {
+  buildAnnouncementsCsv,
+  buildAnnouncementsCsvFileName,
+  type AnnouncementMediaFilter,
+  type AnnouncementSortType,
+  filterAnnouncements,
+  sortAnnouncements,
+} from "@/lib/announcement-utils";
+import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { logError } from "@/lib/error-utils";
-import { fetchAnnouncements, type Announcement } from "@/services/announcements-service";
+import { fetchAllAnnouncements, fetchAnnouncements, type Announcement } from "@/services/announcements-service";
 
 const PAGE_SIZE = 30;
+
+interface ToastState {
+  message: string;
+  tone: CustomToastTone;
+}
 
 export default function AdminAnnouncementPage() {
   const router = useRouter();
@@ -23,17 +39,26 @@ export default function AdminAnnouncementPage() {
   const [displayAnnouncements, setDisplayAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   // Filter and sort states (initialized from URL)
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [sortType, setSortType] = useState<"newest" | "oldest">("newest");
-  const [hasImageFilter, setHasImageFilter] = useState<"all" | "with-image" | "no-image">("all");
+  const [sortType, setSortType] = useState<AnnouncementSortType>("newest");
+  const [hasImageFilter, setHasImageFilter] = useState<AnnouncementMediaFilter>("all");
   const [isInitialized, setIsInitialized] = useState(false);
   const [loadingImages, setLoadingImages] = useState<Set<number>>(new Set());
+
+  const showToast = useCallback((message: string, tone: CustomToastTone) => {
+    setToast({ message, tone });
+    window.setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  }, []);
 
   // Initialize state from URL on mount
   useEffect(() => {
@@ -54,7 +79,7 @@ export default function AdminAnnouncementPage() {
 
   // Update URL when filters or sort change
   const updateURL = useCallback(
-    (from: string, to: string, sort: "newest" | "oldest", image: "all" | "with-image" | "no-image") => {
+    (from: string, to: string, sort: AnnouncementSortType, image: AnnouncementMediaFilter) => {
       const params = new URLSearchParams();
 
       if (from) params.set("from", from);
@@ -75,16 +100,14 @@ export default function AdminAnnouncementPage() {
     updateURL(startDate, endDate, sortType, hasImageFilter);
   }, [startDate, endDate, sortType, hasImageFilter, isInitialized, updateURL]);
 
-  const loadAnnouncements = useCallback(async (isInitial = false) => {
+  const loadAnnouncements = useCallback(async (currentOffset: number, isInitial = false) => {
     try {
       if (isInitial) {
         setLoading(true);
-        setOffset(0);
       } else {
         setLoadingMore(true);
       }
 
-      const currentOffset = isInitial ? 0 : offset;
       const { announcements: data, count } = await fetchAnnouncements({
         limit: PAGE_SIZE,
         offset: currentOffset,
@@ -94,14 +117,14 @@ export default function AdminAnnouncementPage() {
 
       if (isInitial) {
         setAnnouncements(newData);
-        setOffset(PAGE_SIZE);
+        setOffset(newData.length);
       } else {
         setAnnouncements((prev) => [...prev, ...newData]);
-        setOffset((prev) => prev + PAGE_SIZE);
+        setOffset(currentOffset + newData.length);
       }
 
       // Check if there are more items to load
-      setHasMore(count ? currentOffset + PAGE_SIZE < count : false);
+      setHasMore(count ? currentOffset + newData.length < count : false);
     } catch (error) {
       logError("Error loading announcements", error);
       if (isInitial) setAnnouncements([]);
@@ -112,61 +135,57 @@ export default function AdminAnnouncementPage() {
         setLoadingMore(false);
       }
     }
-  }, [offset]);
+  }, []);
 
   // Load initial announcements
   useEffect(() => {
     if (!isInitialized) return;
-    void loadAnnouncements(true);
-  }, [isInitialized]);
+    void loadAnnouncements(0, true);
+  }, [isInitialized, loadAnnouncements]);
 
   // Apply filters and sorting when data or filters change
   useEffect(() => {
-    let filtered = [...announcements];
-
-    // Date range filter
-    if (startDate || endDate) {
-      filtered = filtered.filter((announcement) => {
-        const date = new Date(announcement.created_at);
-        const start = startDate ? new Date(startDate) : null;
-        const end = endDate ? new Date(endDate) : null;
-
-        if (start && end) {
-          return date >= start && date <= end;
-        } else if (start) {
-          return date >= start;
-        } else if (end) {
-          return date <= end;
-        }
-        return true;
-      });
-    }
-
-    // Image filter
-    if (hasImageFilter === "with-image") {
-      filtered = filtered.filter((a) => !!a.image_url);
-    } else if (hasImageFilter === "no-image") {
-      filtered = filtered.filter((a) => !a.image_url);
-    }
-
-    // Sort
-    const sorted = filtered.sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return sortType === "newest" ? dateB - dateA : dateA - dateB;
-    });
-
-    setDisplayAnnouncements(sorted);
+    const filtered = filterAnnouncements(announcements, startDate, endDate, hasImageFilter);
+    setDisplayAnnouncements(sortAnnouncements(filtered, sortType));
   }, [announcements, startDate, endDate, sortType, hasImageFilter]);
 
   const handleRefresh = () => {
     setExpandedId(null);
-    void loadAnnouncements(true);
+    void loadAnnouncements(0, true);
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+
+      const allAnnouncements = await fetchAllAnnouncements();
+      const filteredAnnouncements = filterAnnouncements(
+        allAnnouncements,
+        startDate,
+        endDate,
+        hasImageFilter
+      );
+      const sortedAnnouncements = sortAnnouncements(filteredAnnouncements, sortType);
+      const csvContent = buildAnnouncementsCsv(sortedAnnouncements);
+
+      downloadCsvFile(csvContent, buildAnnouncementsCsvFileName());
+      showToast(
+        sortedAnnouncements.length > 0
+          ? `Exported ${sortedAnnouncements.length} announcement${sortedAnnouncements.length === 1 ? "" : "s"} to CSV.`
+          : "Exported an empty announcements CSV.",
+        "success"
+      );
+    } catch (error) {
+      logError("Failed to export announcements:", error);
+      showToast("Failed to export announcements. Please try again.", "danger");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
-      void loadAnnouncements(false);
+      void loadAnnouncements(offset);
     }
   };
 
@@ -187,16 +206,6 @@ export default function AdminAnnouncementPage() {
     isLoading: loadingMore,
     rootMargin: "200px",
   });
-
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   const hasActiveFilters = startDate || endDate || hasImageFilter !== "all";
 
@@ -226,16 +235,29 @@ export default function AdminAnnouncementPage() {
   return (
     <PhotoProvider>
       <div className="h-full space-y-4">
+        {toast && <CustomToast message={toast.message} tone={toast.tone} mode="floating" />}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-[#1D2981]">Announcements</h1>
             <p className="mt-1 text-sm text-slate-600">Create and manage system-wide announcements for all users.</p>
           </div>
-          <Button onClick={handleRefresh} variant="outline" size="sm" disabled={loading}>
-            <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleExportCsv}
+              size="sm"
+              disabled={loading || exporting}
+              className="bg-[#1D2981] text-white hover:bg-[#16206a]"
+            >
+              <Download className="mr-2 size-4" />
+              {exporting ? "Exporting..." : "Export CSV"}
+            </Button>
+            <Button onClick={handleRefresh} variant="outline" size="sm" disabled={loading || exporting}>
+              <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Two-column layout */}
@@ -318,7 +340,7 @@ export default function AdminAnnouncementPage() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <p className="text-xs text-slate-500">
-                                  {formatTimestamp(announcement.created_at)}
+                                  {formatDateTimeInPhilippineTime(announcement.created_at)}
                                 </p>
                                 {announcement.image_url && (
                                   <ImageIcon className="size-3 text-slate-400" />

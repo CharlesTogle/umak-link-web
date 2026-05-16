@@ -19,12 +19,32 @@ export interface CreateAnnouncementRequest {
   image_url?: string | null;
 }
 
-export async function fetchAnnouncements(params?: {
+export interface FetchAnnouncementsParams {
   limit?: number;
   offset?: number;
-}): Promise<AnnouncementsResponse> {
+}
+
+export async function fetchAnnouncements(params?: FetchAnnouncementsParams): Promise<AnnouncementsResponse> {
   const { data } = await api.get<AnnouncementsResponse>("/announcements", { params });
   return data;
+}
+
+export async function fetchAllAnnouncements(pageSize = 100): Promise<Announcement[]> {
+  const announcements: Announcement[] = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await fetchAnnouncements({ limit: pageSize, offset });
+    announcements.push(...page.announcements);
+
+    if (page.announcements.length < pageSize) {
+      break;
+    }
+
+    offset += page.announcements.length;
+  }
+
+  return announcements;
 }
 
 export async function createAnnouncement(

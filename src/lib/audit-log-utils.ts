@@ -1,5 +1,8 @@
 import type { AuditLog } from "@/services/audit-logs-service";
+import { escapeCsvCell } from "@/lib/csv-utils";
 import { formatDateTimeInPhilippineTime, toTimestampMillis } from "@/lib/date-time-helpers";
+
+export { downloadCsvFile } from "@/lib/csv-utils";
 
 /**
  * Format action type from snake_case to Title Case
@@ -155,21 +158,6 @@ function getAuditLogDetailsJson(log: AuditLog): string {
   return Object.keys(details).length > 0 ? JSON.stringify(details) : "";
 }
 
-function escapeCsvCell(value: unknown): string {
-  const normalizedValue = value == null ? "" : String(value);
-  const escapedValue = normalizedValue.replaceAll('"', '""');
-
-  if (
-    escapedValue.includes(",") ||
-    escapedValue.includes('"') ||
-    escapedValue.includes("\n")
-  ) {
-    return `"${escapedValue}"`;
-  }
-
-  return escapedValue;
-}
-
 export function buildAuditLogsCsv(logs: AuditLog[]): string {
   const headers = [
     "Audit ID",
@@ -207,17 +195,4 @@ export function buildAuditLogsCsv(logs: AuditLog[]): string {
 export function buildAuditLogsCsvFileName(now = new Date()): string {
   const timestamp = now.toISOString().replaceAll(":", "-");
   return `audit-trail-${timestamp}.csv`;
-}
-
-export function downloadCsvFile(csvContent: string, fileName: string): void {
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const downloadUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = downloadUrl;
-  link.download = fileName;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(downloadUrl);
 }

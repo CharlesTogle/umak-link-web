@@ -294,6 +294,8 @@ export function useGuardQrScanner({ onDetected }: UseGuardQrScannerOptions) {
   }, [state.isOpen, state.phase]);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
       isMountedRef.current = false;
       releaseCamera();

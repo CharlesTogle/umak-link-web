@@ -122,6 +122,9 @@ export function ProcessorClaimPostView({
   });
 
   const isGuardMode = mode === "guard";
+  const postRecordPath = isGuardMode
+    ? `/guard/post-record/view/${postId}`
+    : `/staff/post-record/view/${postId}`;
   const backPath = isGuardMode ? "/guard/active-reviews" : "/staff/post-records";
   const debouncedSearchQuery = useDebouncedValue(ui.searchQuery, 300);
   const debouncedLostItemId = useDebouncedValue(formData.lostItemId, 500);
@@ -135,6 +138,12 @@ export function ProcessorClaimPostView({
   const claimBlockedMessage = isRedirectingAfterClaim
     ? null
     : getClaimBlockedMessage(mode, post);
+  const shouldRedirectBlockedStaffClaim =
+    !isGuardMode &&
+    !postQuery.isLoading &&
+    !isRedirectingAfterClaim &&
+    Boolean(postQuery.data) &&
+    (!post || Boolean(claimBlockedMessage));
   const shouldUseClaimVerificationSession =
     isGuardMode && Boolean(post) && !claimBlockedMessage;
 
@@ -322,6 +331,11 @@ export function ProcessorClaimPostView({
       showToast("Failed to load post", "danger");
     }
   }, [postQuery.error, showToast]);
+
+  useEffect(() => {
+    if (!shouldRedirectBlockedStaffClaim) return;
+    router.replace(postRecordPath);
+  }, [postRecordPath, router, shouldRedirectBlockedStaffClaim]);
 
   const handleUserSelect = (user: UserSearchResult) => {
     dispatchUi({
@@ -520,6 +534,17 @@ export function ProcessorClaimPostView({
   };
 
   if (postQuery.isLoading) {
+    return (
+      <section className="grid h-full min-h-0 grid-cols-1 gap-4 overflow-y-auto pr-1">
+        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="h-5 w-48 animate-pulse rounded-full bg-slate-200" />
+          <div className="mt-4 h-64 animate-pulse rounded-2xl bg-slate-100" />
+        </div>
+      </section>
+    );
+  }
+
+  if (shouldRedirectBlockedStaffClaim) {
     return (
       <section className="grid h-full min-h-0 grid-cols-1 gap-4 overflow-y-auto pr-1">
         <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">

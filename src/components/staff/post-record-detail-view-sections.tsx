@@ -68,6 +68,7 @@ export function PostRecordDetailHeader(props: {
   canOpenInvestigation: boolean;
   record: ApiPostRecordDetails;
   onBack: () => void;
+  onCopyItemId: () => void;
   onShare: () => void;
   onNotify: () => void;
   onNotifyGuard: () => void;
@@ -85,6 +86,14 @@ export function PostRecordDetailHeader(props: {
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={props.onShare} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
             <Share2 className="size-4" /> Share
+          </button>
+          <button
+            type="button"
+            onClick={props.onCopyItemId}
+            disabled={!props.record.item_id}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Copy className="size-4" /> Copy Item ID
           </button>
           {props.canNotifyOwner ? (
             <button type="button" onClick={props.onNotify} className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 hover:bg-amber-100">

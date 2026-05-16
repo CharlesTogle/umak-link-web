@@ -257,4 +257,149 @@ test.describe('Staff Claim Flow', () => {
 
     expect(claimBlockedScreenSeen).toBe(false);
   });
+
+  test('blocked staff claim route redirects to the post record without flashing the blocked claim screen', async ({
+    page,
+    loginAsStaff,
+  }) => {
+    const postId = '2002';
+    const blockedPost = {
+      post_id: Number(postId),
+      poster_id: 'poster-002',
+      post_status: 'accepted',
+      item_id: 'ITEM-2002',
+      is_anonymous: false,
+      submitted_on_date_local: '2026-05-16T08:00:00.000Z',
+      rejection_reason: null,
+      accepted_on_date_local: '2026-05-16T08:30:00.000Z',
+      last_seen_date: '2026-05-15',
+      last_seen_time: '10:00',
+      last_seen_at: '2026-05-15T10:00:00.000Z',
+      last_seen_location: 'Engineering Building',
+      item_name: 'Grey Umbrella',
+      item_description: 'Compact umbrella tagged by the guard for handoff.',
+      image_id: null,
+      item_image_url: null,
+      item_status: 'unclaimed',
+      item_type: 'found',
+      category: 'Umbrella',
+      poster_name: 'Reporter User',
+      poster_email: 'reporter@umak.edu.ph',
+      poster_profile_picture_url: null,
+      claim_id: null,
+      claimer_name: null,
+      claimer_school_email: null,
+      claimer_contact_num: null,
+      claimed_at: null,
+      claim_processed_by_name: null,
+      claim_processed_by_email: null,
+      claim_processed_by_profile_picture_url: null,
+      claim_processed_by_user_type: null,
+      linked_lost_item_id: null,
+      returned_at: null,
+      accepted_by_guard_name: 'Guard User',
+      accepted_by_guard_email: 'guard@umak.edu.ph',
+      custody_status: 'with_guard',
+    } satisfies ApiPostRecordDetails;
+
+    await page.addInitScript(() => {
+      const blockedTexts = [
+        'Post not ready for claim',
+        'This found post cannot be claimed until the item is received in the Security Office.',
+      ];
+      const win = window as typeof window & {
+        __claimBlockedSeen?: boolean;
+        __claimBlockedObserver?: MutationObserver;
+      };
+
+      win.__claimBlockedSeen = false;
+
+      const observeBlockedClaimState = () => {
+        const recordBlockedClaimState = () => {
+          const bodyText = document.body?.innerText ?? '';
+          if (blockedTexts.some((text) => bodyText.includes(text))) {
+            win.__claimBlockedSeen = true;
+          }
+        };
+
+        recordBlockedClaimState();
+        const observer = new MutationObserver(recordBlockedClaimState);
+        observer.observe(document.documentElement, {
+          subtree: true,
+          childList: true,
+          characterData: true,
+        });
+
+        win.__claimBlockedObserver = observer;
+      };
+
+      if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', observeBlockedClaimState, {
+          once: true,
+        });
+        return;
+      }
+
+      observeBlockedClaimState();
+    });
+
+    await loginAsStaff();
+
+    await page.route('**/posts**', async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+
+      const url = new URL(route.request().url());
+
+      if (url.pathname === `/custody/posts/${postId}/history`) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            post_id: Number(postId),
+            item_id: blockedPost.item_id,
+            post_status: blockedPost.post_status,
+            custody_status: blockedPost.custody_status,
+            history: [],
+          }),
+        });
+        return;
+      }
+
+      if (url.pathname === `/posts/${postId}/full`) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(blockedPost),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: `Unhandled posts route in test: ${url.pathname}` }),
+      });
+    });
+
+    await page.goto(`/staff/post/claim/${postId}`);
+
+    await expect(page).toHaveURL(APP_ROUTES.staff.viewPost(postId));
+    await expect(page.getByRole('heading', { name: 'Grey Umbrella' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Post Details' })).toBeVisible();
+
+    const claimBlockedScreenSeen = await page.evaluate(() => {
+      const win = window as typeof window & {
+        __claimBlockedSeen?: boolean;
+        __claimBlockedObserver?: MutationObserver;
+      };
+
+      win.__claimBlockedObserver?.disconnect();
+      return Boolean(win.__claimBlockedSeen);
+    });
+
+    expect(claimBlockedScreenSeen).toBe(false);
+  });
 });

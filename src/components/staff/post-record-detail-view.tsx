@@ -539,6 +539,20 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
     }
   };
 
+  const handleCopyItemId = async () => {
+    if (!record?.item_id) {
+      setToast("Item ID is not available", "danger");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(record.item_id);
+      setToast("Item ID copied to clipboard", "success");
+    } catch {
+      setToast("Failed to copy Item ID", "danger");
+    }
+  };
+
   if (postQuery.isLoading) {
     return <section className="grid h-full min-h-0 grid-cols-1 gap-4 overflow-y-auto pr-1"><div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"><div className="h-5 w-48 animate-pulse rounded-full bg-slate-200" /><div className="mt-4 h-24 animate-pulse rounded-2xl bg-slate-100" /></div><div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"><div className="h-6 w-64 animate-pulse rounded-full bg-slate-200" /><div className="mt-4 h-56 animate-pulse rounded-2xl bg-slate-100" /></div></section>;
   }
@@ -558,6 +572,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
           canOpenInvestigation={canOpenInvestigation}
           record={record}
           onBack={() => router.push("/staff/post-records")}
+          onCopyItemId={() => void handleCopyItemId()}
           onShare={() => void handleShare()}
           onNotify={() => dispatchUi({ type: "set_modal", modal: "showNotifyModal", value: true })}
           onNotifyGuard={() => void handleNotifyGuard()}

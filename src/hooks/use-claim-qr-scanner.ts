@@ -296,6 +296,8 @@ export function useClaimQrScanner({ onDetected }: UseClaimQrScannerOptions) {
   }, [state.isOpen, state.phase]);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
       isMountedRef.current = false;
       releaseCamera();

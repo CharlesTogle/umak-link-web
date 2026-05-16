@@ -9,11 +9,25 @@ import type { PortalUserType } from "@/types/auth";
 import { fetchUsers, updateUserRole } from "@/services/admin-service";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
+import { downloadCsvFile, escapeCsvCell } from "@/lib/csv-utils";
 import { logError } from "@/lib/error-utils";
 import { formatRelativeTime } from "@/lib/time";
 import type { UserListItem } from "@/types/auth";
 import { searchUsers as searchUsersAPI } from "@/services/users-service";
 import Image from "next/image";
+
+const USERS_PER_PAGE = 10;
+const SEARCH_HIGHLIGHT_DURATION_MS = 3000;
+
+type UserSortField = "name" | "email" | "joined" | "lastLogin";
+type UserSortDirection = "asc" | "desc";
+
+const DEFAULT_SORT_DIRECTION: Record<UserSortField, UserSortDirection> = {
+  name: "asc",
+  email: "asc",
+  joined: "desc",
+  lastLogin: "desc",
+};
 
 interface UserCardProps {
   user: UserListItem;
@@ -298,6 +312,7 @@ export default function AdminManagementPage() {
   const [staff, setStaff] = useState<UserListItem[]>([]);
   const [guards, setGuards] = useState<UserListItem[]>([]);
   const [users, setUsers] = useState<UserListItem[]>([]);
+  const [allRegularUsers, setAllRegularUsers] = useState<UserListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
@@ -322,17 +337,19 @@ export default function AdminManagementPage() {
   // Pagination state for regular users
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
-  const usersPerPage = 10;
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserListItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [highlightedUserId, setHighlightedUserId] = useState<string | null>(null);
+  const [pendingScrollUserId, setPendingScrollUserId] = useState<string | null>(null);
+  const highlightTimeoutRef = useRef<number | null>(null);
 
   // Filter and sort state
   const [roleFilter, setRoleFilter] = useState<"All" | PortalUserType>("All");
-  const [sortBy, setSortBy] = useState<"name" | "email" | "joined" | "lastLogin">("name");
+  const [sortBy, setSortBy] = useState<UserSortField>("name");
+  const [sortDirection, setSortDirection] = useState<UserSortDirection>(DEFAULT_SORT_DIRECTION.name);
 
   const loadUsers = async () => {
     try {
@@ -369,15 +386,21 @@ export default function AdminManagementPage() {
     try {
       setIsLoadingUsers(true);
       const response = await fetchUsers(["User"]);
+      const regularUsers = response.users;
 
-      setTotalUsers(response.users.length);
+      setAllRegularUsers(regularUsers);
+      setTotalUsers(regularUsers.length);
 
-      // Client-side pagination
-      const startIndex = (page - 1) * usersPerPage;
-      const endIndex = startIndex + usersPerPage;
-      const paginatedUsers = response.users.slice(startIndex, endIndex);
+      const totalRegularUserPages = Math.max(1, Math.ceil(regularUsers.length / USERS_PER_PAGE));
+      const pageToUse = Math.min(page, totalRegularUserPages);
+      const startIndex = (pageToUse - 1) * USERS_PER_PAGE;
+      const endIndex = startIndex + USERS_PER_PAGE;
+      const paginatedUsers = regularUsers.slice(startIndex, endIndex);
 
       setUsers(paginatedUsers);
+      if (pageToUse !== currentPage) {
+        setCurrentPage(pageToUse);
+      }
     } catch (error) {
       logError("Failed to load regular users:", error);
       setToast({
@@ -398,6 +421,7 @@ export default function AdminManagementPage() {
 
   useEffect(() => {
     loadRegularUsers(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   // Debounced search effect
@@ -412,12 +436,24 @@ export default function AdminManagementPage() {
     const timer = setTimeout(async () => {
       try {
         // First, search local state
-        const allLocalUsers = [...admins, ...staff, ...guards, ...users];
-        const localMatches = allLocalUsers.filter(
-          (user) =>
+        const allLocalUsers = [...admins, ...staff, ...guards, ...allRegularUsers];
+        const seenUserIds = new Set<string>();
+        const localMatches = allLocalUsers.filter((user) => {
+          if (seenUserIds.has(user.user_id)) {
+            return false;
+          }
+
+          const matchesQuery =
             user.user_name?.toLowerCase().includes(trimmed.toLowerCase()) ||
-            user.email?.toLowerCase().includes(trimmed.toLowerCase())
-        );
+            user.email?.toLowerCase().includes(trimmed.toLowerCase());
+
+          if (!matchesQuery) {
+            return false;
+          }
+
+          seenUserIds.add(user.user_id);
+          return true;
+        });
 
         if (localMatches.length > 0) {
           // Found matches in local state
@@ -447,7 +483,7 @@ export default function AdminManagementPage() {
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchQuery, admins, staff, guards, users]);
+  }, [searchQuery, admins, staff, guards, allRegularUsers]);
 
   // Auto-dismiss toast after 3 seconds
   useEffect(() => {
@@ -458,6 +494,14 @@ export default function AdminManagementPage() {
       return () => clearTimeout(timer);
     }
   }, [toast.show]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current !== null) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleRemoveClick = (user: UserListItem) => {
     setConfirmModal({ isOpen: true, user });
@@ -488,6 +532,7 @@ export default function AdminManagementPage() {
         message: `${userToRemove.user_type} removed successfully`,
         tone: "success",
       });
+      void loadRegularUsers(currentPage);
     } catch (error) {
       logError("Failed to remove user:", error);
       setToast({
@@ -542,8 +587,12 @@ export default function AdminManagementPage() {
       } else if (newRole === "Staff") {
         setStaff((prev) => [...prev, updatedUser]);
       } else if (newRole === "User") {
-        // If demoted to User, reload the users list to include them
-        loadRegularUsers(currentPage);
+        // Refresh the regular users list when a user is moved back into it.
+        void loadRegularUsers(currentPage);
+      }
+
+      if (userToEdit.user_type === "User" && newRole !== "User") {
+        void loadRegularUsers(currentPage);
       }
 
       setToast({
@@ -630,6 +679,7 @@ export default function AdminManagementPage() {
       setStaff((prev) => prev.filter((u) => !selectedUserIds.has(u.user_id)));
       setGuards((prev) => prev.filter((u) => !selectedUserIds.has(u.user_id)));
       setSelectedUserIds(new Set());
+      void loadRegularUsers(currentPage);
 
       if (successCount > 0 && failedCount === 0) {
         setToast({
@@ -666,27 +716,96 @@ export default function AdminManagementPage() {
     setCurrentPage(newPage);
   };
 
-  // Handle search result click - scroll to and highlight user
-  const handleSearchResultClick = (userId: string) => {
+  const highlightUserCard = useCallback((userId: string) => {
     setHighlightedUserId(userId);
-    setSearchQuery("");
-    setSearchResults([]);
 
-    // Scroll to the user card
-    const userCard = document.getElementById(`user-card-${userId}`);
-    if (userCard) {
-      userCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (highlightTimeoutRef.current !== null) {
+      window.clearTimeout(highlightTimeoutRef.current);
     }
 
-    // Remove highlight after 3 seconds
-    setTimeout(() => {
+    highlightTimeoutRef.current = window.setTimeout(() => {
       setHighlightedUserId(null);
-    }, 3000);
+      highlightTimeoutRef.current = null;
+    }, SEARCH_HIGHLIGHT_DURATION_MS);
+  }, []);
+
+  const scrollToUserCard = useCallback((userId: string) => {
+    const userCard = document.getElementById(`user-card-${userId}`);
+    if (!userCard) {
+      return false;
+    }
+
+    userCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    highlightUserCard(userId);
+    return true;
+  }, [highlightUserCard]);
+
+  useEffect(() => {
+    if (!pendingScrollUserId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (scrollToUserCard(pendingScrollUserId)) {
+        setPendingScrollUserId(null);
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [pendingScrollUserId, admins, staff, guards, users, roleFilter, scrollToUserCard]);
+
+  // Handle search result click - switch to the correct list/page, then scroll and highlight the user
+  const handleSearchResultClick = async (user: UserListItem) => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setPendingScrollUserId(user.user_id);
+
+    if (roleFilter !== "All" && roleFilter !== user.user_type) {
+      setRoleFilter(user.user_type);
+    }
+
+    if (user.user_type === "User") {
+      let regularUsers = allRegularUsers;
+      let regularUserIndex = regularUsers.findIndex((regularUser) => regularUser.user_id === user.user_id);
+
+      if (regularUserIndex === -1) {
+        try {
+          const response = await fetchUsers(["User"]);
+          regularUsers = response.users;
+          regularUserIndex = regularUsers.findIndex((regularUser) => regularUser.user_id === user.user_id);
+
+          setAllRegularUsers(regularUsers);
+          setTotalUsers(regularUsers.length);
+        } catch (error) {
+          logError("Failed to refresh regular users before search navigation:", error);
+        }
+      }
+
+      if (regularUserIndex >= 0) {
+        const targetPage = Math.floor(regularUserIndex / USERS_PER_PAGE) + 1;
+        if (targetPage !== currentPage) {
+          setCurrentPage(targetPage);
+        } else {
+          const startIndex = (targetPage - 1) * USERS_PER_PAGE;
+          const endIndex = startIndex + USERS_PER_PAGE;
+          setUsers(regularUsers.slice(startIndex, endIndex));
+        }
+      }
+    }
+  };
+
+  const handleSortChange = (nextSortBy: UserSortField) => {
+    setSortBy(nextSortBy);
+    setSortDirection((currentDirection) =>
+      sortBy === nextSortBy ? currentDirection : DEFAULT_SORT_DIRECTION[nextSortBy]
+    );
   };
 
   // Export to CSV
   const handleExportCSV = useCallback(() => {
-    const allUsers = [...admins, ...staff, ...guards, ...users];
+    const allUsers = [...admins, ...staff, ...guards, ...allRegularUsers];
     if (allUsers.length === 0) {
       setToast({
         show: true,
@@ -696,70 +815,55 @@ export default function AdminManagementPage() {
       return;
     }
 
-    // CSV headers
-    const headers = ["Name", "Email", "Role", "User ID", "Date Joined", "Last Login"];
+    const headers = ["Username", "Email", "Last Login At", "Role"];
     const rows = allUsers.map((u) => [
-      u.user_name || "Unknown",
-      u.email || "No email",
+      u.user_name || "",
+      u.email || "",
+      u.last_login ? formatDateTimeInPhilippineTime(u.last_login, "") : "",
       u.user_type,
-      u.user_id,
-      formatDateTimeInPhilippineTime(u.created_at, "Never"),
-      u.last_login ? formatDateTimeInPhilippineTime(u.last_login, "Never") : "Never",
     ]);
 
-    // Build CSV content
     const csvContent = [
-      headers.join(","),
+      headers.map((header) => escapeCsvCell(header)).join(","),
       ...rows.map((row) =>
         row
-          .map((cell) => {
-            // Escape cells that contain commas or quotes
-            const escaped = String(cell).replace(/"/g, '""');
-            return escaped.includes(",") || escaped.includes('"') ? `"${escaped}"` : escaped;
-          })
+          .map((cell) => escapeCsvCell(cell))
           .join(",")
       ),
     ].join("\n");
 
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `user-management-${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadCsvFile(csvContent, `user-management-${new Date().toISOString().split("T")[0]}.csv`);
 
     setToast({
       show: true,
       message: `Exported ${allUsers.length} user${allUsers.length !== 1 ? "s" : ""}`,
       tone: "success",
     });
-  }, [admins, staff, guards, users]);
+  }, [admins, staff, guards, allRegularUsers]);
 
   const selectedCount = selectedUserIds.size;
   const hasSelection = selectedCount > 0;
-  const totalPages = Math.ceil(totalUsers / usersPerPage);
+  const totalPages = Math.ceil(totalUsers / USERS_PER_PAGE);
 
   // Apply sorting
   const sortUsers = (userList: UserListItem[]) => {
     return [...userList].sort((a, b) => {
+      const directionMultiplier = sortDirection === "asc" ? 1 : -1;
+
       switch (sortBy) {
         case "name":
-          return (a.user_name || "").localeCompare(b.user_name || "");
+          return (a.user_name || "").localeCompare(b.user_name || "") * directionMultiplier;
         case "email":
-          return (a.email || "").localeCompare(b.email || "");
+          return (a.email || "").localeCompare(b.email || "") * directionMultiplier;
         case "joined": {
           const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          return dateB - dateA;
+          return (dateA - dateB) * directionMultiplier;
         }
         case "lastLogin": {
           const dateA = a.last_login ? new Date(a.last_login).getTime() : 0;
           const dateB = b.last_login ? new Date(b.last_login).getTime() : 0;
-          return dateB - dateA;
+          return (dateA - dateB) * directionMultiplier;
         }
         default:
           return 0;
@@ -1181,7 +1285,7 @@ export default function AdminManagementPage() {
                     <button
                       key={user.user_id}
                       type="button"
-                      onClick={() => handleSearchResultClick(user.user_id)}
+                      onClick={() => handleSearchResultClick(user)}
                       className="flex w-full items-center gap-3 rounded-lg border border-transparent bg-slate-50 p-2 text-left transition hover:border-[#1D2981] hover:bg-[#1D2981]/5"
                     >
                       <div className="size-10 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-white">
@@ -1283,12 +1387,30 @@ export default function AdminManagementPage() {
                       name="sortBy"
                       value={option.value}
                       checked={sortBy === option.value}
-                      onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                      onChange={() => handleSortChange(option.value)}
                       className="size-4 accent-[#1D2981]"
                     />
                     <span className="text-sm font-medium text-slate-900">{option.label}</span>
                   </label>
                 ))}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={sortDirection === "asc" ? "default" : "outline"}
+                  onClick={() => setSortDirection("asc")}
+                  className={sortDirection === "asc" ? "bg-[#1D2981] hover:bg-[#1D2981]/90" : ""}
+                >
+                  Ascending
+                </Button>
+                <Button
+                  type="button"
+                  variant={sortDirection === "desc" ? "default" : "outline"}
+                  onClick={() => setSortDirection("desc")}
+                  className={sortDirection === "desc" ? "bg-[#1D2981] hover:bg-[#1D2981]/90" : ""}
+                >
+                  Descending
+                </Button>
               </div>
             </CardContent>
           </Card>

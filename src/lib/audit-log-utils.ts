@@ -1,4 +1,5 @@
 import type { AuditLog } from "@/services/audit-logs-service";
+import { formatDateTimeInPhilippineTime, toTimestampMillis } from "@/lib/date-time-helpers";
 
 /**
  * Format action type from snake_case to Title Case
@@ -10,6 +11,37 @@ export function formatActionType(actionType: string | null): string {
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+function getAuditLogChanges(log: AuditLog): Record<string, unknown> {
+  return log.changes && typeof log.changes === "object" ? log.changes : {};
+}
+
+export function getAuditLogTimestampValue(log: AuditLog): string | null {
+  if (typeof log.timestamp_local === "string" && log.timestamp_local.trim().length > 0) {
+    return log.timestamp_local;
+  }
+
+  if (typeof log.timestamp === "string" && log.timestamp.trim().length > 0) {
+    return log.timestamp;
+  }
+
+  return null;
+}
+
+function getPhilippineDayStartMillis(value: string): number {
+  return toTimestampMillis(`${value}T00:00:00`);
+}
+
+function getPhilippineDayEndMillis(value: string): number {
+  return toTimestampMillis(`${value}T23:59:59.999`);
+}
+
+export function getAuditLogMessage(log: AuditLog): string {
+  const message = getAuditLogChanges(log).message;
+  return typeof message === "string" && message.trim().length > 0
+    ? message
+    : formatActionType(log.action);
 }
 
 /**
@@ -83,15 +115,13 @@ export function filterAuditLogs(
     }
 
     // Filter by date range
-    if (log.timestamp) {
-      const logDate = new Date(log.timestamp);
+    const logTime = toTimestampMillis(getAuditLogTimestampValue(log));
+    if (logTime > 0) {
       if (startDate) {
-        const start = new Date(startDate);
-        if (logDate < start) return false;
+        if (logTime < getPhilippineDayStartMillis(startDate)) return false;
       }
       if (endDate) {
-        const end = new Date(endDate);
-        if (logDate > end) return false;
+        if (logTime > getPhilippineDayEndMillis(endDate)) return false;
       }
     }
 
@@ -106,8 +136,8 @@ export function sortAuditLogs(logs: AuditLog[], sortType: "newest" | "oldest"): 
   const sorted = [...logs];
 
   sorted.sort((a, b) => {
-    const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-    const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+    const timeA = toTimestampMillis(getAuditLogTimestampValue(a));
+    const timeB = toTimestampMillis(getAuditLogTimestampValue(b));
 
     if (sortType === "oldest") {
       return timeA - timeB;
@@ -117,4 +147,77 @@ export function sortAuditLogs(logs: AuditLog[], sortType: "newest" | "oldest"): 
   });
 
   return sorted;
+}
+
+function getAuditLogDetailsJson(log: AuditLog): string {
+  const details = { ...getAuditLogChanges(log) };
+  delete details.message;
+  return Object.keys(details).length > 0 ? JSON.stringify(details) : "";
+}
+
+function escapeCsvCell(value: unknown): string {
+  const normalizedValue = value == null ? "" : String(value);
+  const escapedValue = normalizedValue.replaceAll('"', '""');
+
+  if (
+    escapedValue.includes(",") ||
+    escapedValue.includes('"') ||
+    escapedValue.includes("\n")
+  ) {
+    return `"${escapedValue}"`;
+  }
+
+  return escapedValue;
+}
+
+export function buildAuditLogsCsv(logs: AuditLog[]): string {
+  const headers = [
+    "Audit ID",
+    "Timestamp (PHT)",
+    "Timestamp (ISO)",
+    "Action",
+    "User Name",
+    "User Email",
+    "User ID",
+    "Table Name",
+    "Record ID",
+    "Message",
+    "Details JSON",
+  ];
+
+  const rows = logs.map((log) => [
+    log.audit_id,
+    formatDateTimeInPhilippineTime(getAuditLogTimestampValue(log), "Unknown"),
+    log.timestamp ?? getAuditLogTimestampValue(log) ?? "",
+    log.action,
+    log.user_table?.user_name ?? "",
+    log.user_table?.email ?? "",
+    log.user_id ?? "",
+    log.table_name,
+    log.record_id,
+    getAuditLogMessage(log),
+    getAuditLogDetailsJson(log),
+  ]);
+
+  return [headers, ...rows]
+    .map((row) => row.map((value) => escapeCsvCell(value)).join(","))
+    .join("\n");
+}
+
+export function buildAuditLogsCsvFileName(now = new Date()): string {
+  const timestamp = now.toISOString().replaceAll(":", "-");
+  return `audit-trail-${timestamp}.csv`;
+}
+
+export function downloadCsvFile(csvContent: string, fileName: string): void {
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = downloadUrl;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(downloadUrl);
 }

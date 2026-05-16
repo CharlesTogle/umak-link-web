@@ -2,24 +2,34 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Filter, RefreshCw, User } from "lucide-react";
+import { ChevronDown, Download, RefreshCw, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CustomToast, type CustomToastTone } from "@/components/ui/custom-toast";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { logError } from "@/lib/error-utils";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
-import { fetchAuditLogs, type AuditLog } from "@/services/audit-logs-service";
+import { fetchAllAuditLogs, fetchAuditLogs, type AuditLog } from "@/services/audit-logs-service";
 import {
-  formatActionType,
+  buildAuditLogsCsv,
+  buildAuditLogsCsvFileName,
+  downloadCsvFile,
   getUniqueActionTypes,
+  getAuditLogMessage,
+  getAuditLogTimestampValue,
   getUniqueUserNames,
   filterAuditLogs,
   sortAuditLogs,
 } from "@/lib/audit-log-utils";
 
 const LOGS_LIMIT = 20;
+
+interface ToastState {
+  message: string;
+  tone: CustomToastTone;
+}
 
 export default function AdminAuditLogPage() {
   const router = useRouter();
@@ -29,18 +39,25 @@ export default function AdminAuditLogPage() {
   const [displayLogs, setDisplayLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   // Filter and sort states (initialized from URL)
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sortType, setSortType] = useState<"newest" | "oldest">("newest");
-  const [showFilters, setShowFilters] = useState(false);
-  const [showSort, setShowSort] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  const showToast = useCallback((message: string, tone: CustomToastTone) => {
+    setToast({ message, tone });
+    window.setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  }, []);
 
   // Initialize state from URL on mount
   useEffect(() => {
@@ -96,20 +113,7 @@ export default function AdminAuditLogPage() {
     updateURL(activeFilters, startDate, endDate, sortType);
   }, [activeFilters, startDate, endDate, sortType, isInitialized, updateURL]);
 
-  // Load initial logs
-  useEffect(() => {
-    if (!isInitialized) return;
-    loadAuditLogs(0, true);
-  }, [isInitialized]);
-
-  // Apply filters and sorting when data changes
-  useEffect(() => {
-    const filtered = filterAuditLogs(auditLogs, activeFilters, startDate, endDate);
-    const sorted = sortAuditLogs(filtered, sortType);
-    setDisplayLogs(sorted);
-  }, [auditLogs, activeFilters, startDate, endDate, sortType]);
-
-  const loadAuditLogs = async (currentOffset: number, isRefresh = false) => {
+  const loadAuditLogs = useCallback(async (currentOffset: number, isRefresh = false) => {
     try {
       if (isRefresh) {
         setLoading(true);
@@ -123,9 +127,10 @@ export default function AdminAuditLogPage() {
         setAuditLogs(logs);
         setOffset(logs.length);
       } else {
-        const mergedIds = new Set(auditLogs.map((log) => log.audit_id));
-        const uniqueLogs = [...auditLogs, ...logs.filter((log) => !mergedIds.has(log.audit_id))];
-        setAuditLogs(uniqueLogs);
+        setAuditLogs((currentLogs) => {
+          const mergedIds = new Set(currentLogs.map((log) => log.audit_id));
+          return [...currentLogs, ...logs.filter((log) => !mergedIds.has(log.audit_id))];
+        });
         setOffset(currentOffset + logs.length);
       }
 
@@ -136,11 +141,48 @@ export default function AdminAuditLogPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, []);
+
+  // Load initial logs
+  useEffect(() => {
+    if (!isInitialized) return;
+    loadAuditLogs(0, true);
+  }, [isInitialized, loadAuditLogs]);
+
+  // Apply filters and sorting when data changes
+  useEffect(() => {
+    const filtered = filterAuditLogs(auditLogs, activeFilters, startDate, endDate);
+    const sorted = sortAuditLogs(filtered, sortType);
+    setDisplayLogs(sorted);
+  }, [auditLogs, activeFilters, startDate, endDate, sortType]);
 
   const handleRefresh = () => {
     setOffset(0);
     loadAuditLogs(0, true);
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+
+      const allLogs = await fetchAllAuditLogs();
+      const filteredLogs = filterAuditLogs(allLogs, activeFilters, startDate, endDate);
+      const sortedLogs = sortAuditLogs(filteredLogs, sortType);
+      const csvContent = buildAuditLogsCsv(sortedLogs);
+
+      downloadCsvFile(csvContent, buildAuditLogsCsvFileName());
+      showToast(
+        sortedLogs.length > 0
+          ? `Exported ${sortedLogs.length} audit log${sortedLogs.length === 1 ? "" : "s"} to CSV.`
+          : "Exported an empty audit trail CSV.",
+        "success"
+      );
+    } catch (error) {
+      logError("Failed to export audit logs:", error);
+      showToast("Failed to export the audit trail. Please try again.", "danger");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleLoadMore = () => {
@@ -169,7 +211,7 @@ export default function AdminAuditLogPage() {
   const uniqueUserNames = getUniqueUserNames(auditLogs);
 
   const formatAuditValue = (key: string, value: unknown): string => {
-    if (key === "timestamp" && typeof value === "string") {
+    if (typeof value === "string" && (key === "timestamp" || key === "timestamp_local" || key.endsWith("_at"))) {
       return formatDateTimeInPhilippineTime(value);
     }
 
@@ -186,16 +228,29 @@ export default function AdminAuditLogPage() {
 
   return (
     <div className="h-full space-y-4">
+      {toast && <CustomToast message={toast.message} tone={toast.tone} mode="floating" />}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-[#1D2981]">Audit Trail</h1>
           <p className="mt-1 text-sm text-slate-600">Track all chronological staff and administrator actions across the portal.</p>
         </div>
-        <Button onClick={handleRefresh} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleExportCsv}
+            size="sm"
+            disabled={loading || exporting}
+            className="bg-[#1D2981] text-white hover:bg-[#16206a]"
+          >
+            <Download className="mr-2 size-4" />
+            {exporting ? "Exporting..." : "Export CSV"}
+          </Button>
+          <Button onClick={handleRefresh} variant="outline" size="sm" disabled={loading || exporting}>
+            <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Two-column layout */}
@@ -237,11 +292,7 @@ export default function AdminAuditLogPage() {
               <div className="space-y-3">
                 {displayLogs.map((log) => {
                   const isExpanded = expandedId === log.audit_id;
-                  // Extract message from changes object or format action type
-                  const message =
-                    (typeof log.changes === 'object' && log.changes && 'message' in log.changes
-                      ? (log.changes.message as string)
-                      : null) || formatActionType(log.action);
+                  const message = getAuditLogMessage(log);
                   const userName = log.user_table?.user_name || "Unknown User";
                   const userAvatar = log.user_table?.profile_picture_url;
 
@@ -264,7 +315,7 @@ export default function AdminAuditLogPage() {
                           {/* Content */}
                           <div className="min-w-0 flex-1">
                             <p className="text-xs text-slate-500">
-                              {formatDateTimeInPhilippineTime(log.timestamp)}
+                              {formatDateTimeInPhilippineTime(getAuditLogTimestampValue(log), "Unknown")}
                             </p>
                             <p className="mt-1 font-semibold text-slate-900">{message}</p>
                           </div>

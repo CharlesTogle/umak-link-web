@@ -1,10 +1,10 @@
 import { api } from "@/lib/api";
 import type {
-  ApiEditableClaimedCustodyStatus,
+  ApiEditablePostCustodyStatus,
   ApiNotifyGuardResponse,
   ApiOpenCustodyInvestigationResponse,
   ApiSecurityOfficeReceiptResponse,
-  ApiUpdateClaimedCustodyStatusResponse,
+  ApiUpdatePostCustodyStatusResponse,
 } from "@/types/post-record-api";
 
 export async function markPostReceivedInSecurityOffice(postId: number): Promise<ApiSecurityOfficeReceiptResponse> {
@@ -31,11 +31,11 @@ export async function notifyGuardForCustodyFollowUp(postId: number): Promise<Api
   return data;
 }
 
-export async function updateClaimedItemCustodyStatus(
+export async function updatePostCustodyStatus(
   postId: number,
-  custodyStatus: ApiEditableClaimedCustodyStatus
-): Promise<ApiUpdateClaimedCustodyStatusResponse> {
-  const { data } = await api.put<ApiUpdateClaimedCustodyStatusResponse>(
+  custodyStatus: ApiEditablePostCustodyStatus
+): Promise<ApiUpdatePostCustodyStatusResponse> {
+  const { data } = await api.put<ApiUpdatePostCustodyStatusResponse>(
     "/staff/custody/status",
     {
       post_id: postId,

@@ -9,16 +9,17 @@ import { normalizeValue, toDisplayLabel } from "@/lib/format-utils";
 import { buildPostRejectionNotificationCopy } from "@/lib/post-rejection";
 import {
   getPostRecordStatusChangeDecision,
-  isEditableClaimedCustodyStatus,
+  getPostRecordCustodyStatusOptions,
   getPostRecordItemStatusOptions,
+  isEditablePostCustodyStatus,
   isPostRecordItemStatusAllowed,
   isPostRecordPostStatusAllowed,
-  POST_RECORD_CLAIMED_CUSTODY_STATUS_OPTIONS,
   POST_RECORD_POST_STATUS_OPTIONS,
   resolvePostRecordSelectedCustodyStatus,
   resolvePostRecordSelectedItemStatus,
   resolvePostRecordSelectedStatus,
-  shouldShowPostRecordClaimedCustodyOptions,
+  shouldShowPostRecordCustodyOptions,
+  shouldShowPostRecordItemStatusOptions,
   togglePostRecordCustodyStatusSelection,
   togglePostRecordItemStatusSelection,
   togglePostRecordStatusSelection,
@@ -31,7 +32,7 @@ import {
   markPostReceivedInSecurityOffice,
   notifyGuardForCustodyFollowUp,
   openPostCustodyInvestigation,
-  updateClaimedItemCustodyStatus,
+  updatePostCustodyStatus,
 } from "@/services/staff-custody-service";
 import {
   LinkedPostPanel,
@@ -198,6 +199,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
     selectedStatus: null,
     selectedItemStatus: null,
     selectedCustodyStatus: null,
+    discardReason: "",
   });
 
   const normalizedPostStatus = normalizeValue(record?.post_status) as ApiPostStatus;
@@ -246,15 +248,36 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
     normalizedCustodyStatus,
     ui.selectedCustodyStatus
   );
+  const custodyStatusOptions = record
+    ? getPostRecordCustodyStatusOptions(
+        record.item_type,
+        normalizedItemStatus,
+        normalizedCustodyStatus
+      )
+    : [];
   const showCustodyStatusSection = Boolean(
     record &&
-      shouldShowPostRecordClaimedCustodyOptions(record.item_type, normalizedItemStatus)
+      shouldShowPostRecordCustodyOptions(
+        record.item_type,
+        normalizedItemStatus,
+        normalizedCustodyStatus
+      )
   );
-  const showItemStatusSection = !showCustodyStatusSection;
+  const showItemStatusSection = Boolean(
+    record &&
+      shouldShowPostRecordItemStatusOptions(
+        record.item_type,
+        normalizedItemStatus,
+        normalizedCustodyStatus
+      )
+  );
   const statusHelpText =
     record && isFoundItem && normalizedPostStatus === "pending" && normalizedCustodyStatus !== "in_security_office"
       ? "Pending found posts can be accepted or rejected only after the item is marked as received in the Security Office."
       : null;
+  const discardTransitionSelected =
+    ui.selectedItemStatus === "discarded" && normalizedItemStatus !== "discarded";
+  const normalizedDiscardReason = ui.discardReason.trim();
 
   const performStatusChange = useCallback(async () => {
     if (!record || ui.isSubmitting) return;
@@ -271,14 +294,19 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
         if (normalizedItemStatus === "claimed" && ui.selectedItemStatus !== "claimed") {
           await deleteClaimByItem(record.item_id);
         }
-        await updateItemStatus(record.item_id, { status: ui.selectedItemStatus });
+        await updateItemStatus(record.item_id, {
+          status: ui.selectedItemStatus,
+          ...(discardTransitionSelected
+            ? { discard_reason: normalizedDiscardReason }
+            : {}),
+        });
       }
       if (
         showCustodyStatusSection &&
         ui.selectedCustodyStatus &&
         ui.selectedCustodyStatus !== normalizedCustodyStatus
       ) {
-        await updateClaimedItemCustodyStatus(Number(record.post_id), ui.selectedCustodyStatus);
+        await updatePostCustodyStatus(Number(record.post_id), ui.selectedCustodyStatus);
       }
       await Promise.allSettled(
         buildStatusChangeNotifications({
@@ -306,7 +334,7 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       dispatchUi({ type: "set_submitting", value: false });
       dispatchUi({ type: "set_modal", modal: "showUnclaimModal", value: false });
     }
-  }, [custodyHistoryQuery, isFoundItem, linkedPostQuery, normalizedCustodyStatus, normalizedItemStatus, normalizedPostStatus, postQuery, record, setToast, showCustodyStatusSection, ui.isSubmitting, ui.selectedCustodyStatus, ui.selectedItemStatus, ui.selectedStatus]);
+  }, [custodyHistoryQuery, discardTransitionSelected, isFoundItem, linkedPostQuery, normalizedCustodyStatus, normalizedDiscardReason, normalizedItemStatus, normalizedPostStatus, postQuery, record, setToast, showCustodyStatusSection, ui.isSubmitting, ui.selectedCustodyStatus, ui.selectedItemStatus, ui.selectedStatus]);
 
   const handleApplyStatusChange = async () => {
     if (!record) return;
@@ -328,6 +356,11 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
         return;
       }
       router.push(`/staff/post/claim/${record.post_id}`);
+      return;
+    }
+
+    if (discardTransitionSelected && normalizedDiscardReason.length === 0) {
+      setToast("Please record what will happen to the discarded item.", "danger");
       return;
     }
 
@@ -367,6 +400,10 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
       dispatchUi({ type: "set_modal", modal: "showRejectModal", value: false });
       return;
     }
+    if (discardTransitionSelected && normalizedDiscardReason.length === 0) {
+      setToast("Please record what will happen to the discarded item.", "danger");
+      return;
+    }
     dispatchUi({ type: "set_submitting", value: true });
     try {
       await updatePostStatus(String(record.post_id), { status: "rejected", rejection_reason: reason });
@@ -375,14 +412,19 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
         if (normalizedItemStatus === "claimed" && ui.selectedItemStatus !== "claimed") {
           await deleteClaimByItem(record.item_id);
         }
-        await updateItemStatus(record.item_id, { status: ui.selectedItemStatus });
+        await updateItemStatus(record.item_id, {
+          status: ui.selectedItemStatus,
+          ...(discardTransitionSelected
+            ? { discard_reason: normalizedDiscardReason }
+            : {}),
+        });
       }
       if (
         showCustodyStatusSection &&
         ui.selectedCustodyStatus &&
         ui.selectedCustodyStatus !== normalizedCustodyStatus
       ) {
-        await updateClaimedItemCustodyStatus(Number(record.post_id), ui.selectedCustodyStatus);
+        await updatePostCustodyStatus(Number(record.post_id), ui.selectedCustodyStatus);
       }
       await Promise.allSettled(
         buildStatusChangeNotifications({
@@ -555,13 +597,15 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
           selectedStatus={selectedStatus}
           selectedItemStatus={selectedItemStatus}
           selectedCustodyStatus={selectedCustodyStatus}
+          discardReason={ui.discardReason}
           postItemType={record.item_type}
           postStatusOptions={POST_RECORD_POST_STATUS_OPTIONS}
-          claimedCustodyStatusOptions={POST_RECORD_CLAIMED_CUSTODY_STATUS_OPTIONS}
+          custodyStatusOptions={custodyStatusOptions}
           rejectReasons={POST_REJECTION_REASONS}
           statusHelpText={statusHelpText}
           showItemStatusSection={showItemStatusSection}
           showCustodyStatusSection={showCustodyStatusSection}
+          showDiscardReasonField={discardTransitionSelected}
           getStatusChipClass={getStatusChipClass}
           isPostStatusAllowed={(postStatus, selectedItemStatus) =>
             isPostRecordPostStatusAllowed(postStatus, selectedItemStatus) &&
@@ -585,9 +629,15 @@ export function PostRecordDetailView({ postId }: { postId: string }) {
             dispatchUi({
               type: "set_selected_custody_status",
               value: togglePostRecordCustodyStatusSelection(
-                isEditableClaimedCustodyStatus(normalizedCustodyStatus) ? normalizedCustodyStatus : null,
+                isEditablePostCustodyStatus(normalizedCustodyStatus) ? normalizedCustodyStatus : null,
                 value
               ),
+            })
+          }
+          onChangeDiscardReason={(value) =>
+            dispatchUi({
+              type: "set_discard_reason",
+              value,
             })
           }
           onCancelStatus={() => {

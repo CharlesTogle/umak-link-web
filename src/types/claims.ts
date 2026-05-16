@@ -1,3 +1,5 @@
+import type { ClaimVerificationSubmission } from "@/types/claim-verification";
+
 export interface ClaimDetails {
   claimer_name: string;
   claimer_school_email: string;
@@ -12,6 +14,7 @@ export interface ProcessClaimRequest {
   found_post_id: number;
   missing_post_id?: number | null;
   claim_details: ClaimDetails;
+  claim_verification?: ClaimVerificationSubmission;
 }
 
 export interface ProcessClaimResponse {

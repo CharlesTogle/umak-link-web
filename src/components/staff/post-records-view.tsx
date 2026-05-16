@@ -93,10 +93,7 @@ export function PostRecordsView() {
     pageSize: 10,
   });
   const records = flattenInfinitePages(recordsQuery.data?.pages);
-  const visibleRecords =
-    filters.custodyStatus === "all"
-      ? records
-      : records.filter((record) => record.custodyStatus === filters.custodyStatus);
+  const visibleRecords = records;
 
   const updateFilters = (key: PostRecordFilterKey, value: PostRecordFilters[PostRecordFilterKey]) => {
     const newFilters = { ...filters, [key]: value };
@@ -109,20 +106,6 @@ export function PostRecordsView() {
     const timer = window.setTimeout(() => setToast(null), 3000);
     return () => window.clearTimeout(timer);
   }, [toast]);
-
-  useEffect(() => {
-    if (filters.custodyStatus === "all") return;
-    if (visibleRecords.length >= 10) return;
-    if (!recordsQuery.hasNextPage || recordsQuery.isFetchingNextPage || recordsQuery.isLoading) return;
-    void recordsQuery.fetchNextPage();
-  }, [
-    filters.custodyStatus,
-    recordsQuery.fetchNextPage,
-    recordsQuery.hasNextPage,
-    recordsQuery.isFetchingNextPage,
-    recordsQuery.isLoading,
-    visibleRecords.length,
-  ]);
 
   const handleRefresh = async () => {
     await recordsQuery.refetch();

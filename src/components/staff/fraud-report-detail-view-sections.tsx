@@ -252,7 +252,7 @@ export function FraudReportModals(props: {
         <Overlay>
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-lg">
             <h2 className="text-lg font-semibold text-slate-900">Open report?</h2>
-            <p className="mt-2 text-sm text-slate-600">Once opened by you, other staff cannot open this report. An email will also be sent to the claimer.</p>
+            <p className="mt-2 text-sm text-slate-600">Once opened by you, other staff cannot open this report. Email notifications will also be sent to the claimer and any staff or guard involved in the original handover.</p>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button type="button" onClick={props.onCancelAccept} className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
               <button type="button" disabled={props.isProcessing} onClick={props.onConfirmAccept} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">

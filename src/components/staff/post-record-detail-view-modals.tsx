@@ -3,7 +3,7 @@
 import { Overlay } from "@/components/ui/overlay";
 import { toDisplayLabel } from "@/lib/format-utils";
 import type {
-  ApiEditableClaimedCustodyStatus,
+  ApiEditablePostCustodyStatus,
   ApiItemStatus,
   ApiPostStatus,
 } from "@/types/post-record-api";
@@ -16,21 +16,24 @@ export function PostRecordModals(props: {
   isSubmitting: boolean;
   selectedStatus: ApiPostStatus | null;
   selectedItemStatus: ApiItemStatus | null;
-  selectedCustodyStatus: ApiEditableClaimedCustodyStatus | null;
+  selectedCustodyStatus: ApiEditablePostCustodyStatus | null;
+  discardReason: string;
   postItemType: string;
   postStatusOptions: ApiPostStatus[];
-  claimedCustodyStatusOptions: ApiEditableClaimedCustodyStatus[];
+  custodyStatusOptions: ApiEditablePostCustodyStatus[];
   rejectReasons: readonly string[];
   statusHelpText?: string | null;
   showItemStatusSection: boolean;
   showCustodyStatusSection: boolean;
+  showDiscardReasonField: boolean;
   getStatusChipClass: (active: boolean, disabled?: boolean) => string;
   isPostStatusAllowed: (postStatus: ApiPostStatus, selectedItemStatus: ApiItemStatus | null) => boolean;
   isItemStatusAllowed: (itemStatus: ApiItemStatus, selectedPostStatus: ApiPostStatus | null) => boolean;
   getItemStatusOptions: (itemType: string | undefined) => ApiItemStatus[];
   onSelectStatus: (value: ApiPostStatus) => void;
   onSelectItemStatus: (value: ApiItemStatus) => void;
-  onSelectCustodyStatus: (value: ApiEditableClaimedCustodyStatus) => void;
+  onSelectCustodyStatus: (value: ApiEditablePostCustodyStatus) => void;
+  onChangeDiscardReason: (value: string) => void;
   onCancelStatus: () => void;
   onApplyStatusChange: () => void;
   onReject: (reason: string) => void;
@@ -82,7 +85,7 @@ export function PostRecordModals(props: {
               <div className="mt-4 border-t border-slate-200 pt-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Custody Status</p>
                 <div className="flex flex-wrap gap-2">
-                  {props.claimedCustodyStatusOptions.map((status) => {
+                  {props.custodyStatusOptions.map((status) => {
                     const active = props.selectedCustodyStatus === status;
                     return (
                       <button key={status} type="button" onClick={() => props.onSelectCustodyStatus(status)} className={`rounded-full border px-3 py-1.5 text-sm transition ${props.getStatusChipClass(active)}`}>
@@ -91,6 +94,24 @@ export function PostRecordModals(props: {
                     );
                   })}
                 </div>
+              </div>
+            ) : null}
+            {props.showDiscardReasonField ? (
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <label htmlFor="discard-reason" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Discarded Reason
+                </label>
+                <p className="mb-3 text-sm text-slate-600">
+                  Record what happened to the item after it was discarded.
+                </p>
+                <textarea
+                  id="discard-reason"
+                  value={props.discardReason}
+                  onChange={(event) => props.onChangeDiscardReason(event.target.value)}
+                  rows={4}
+                  placeholder="Example: Turned over to campus recycling after the storage retention period."
+                  className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-[#1D2981] focus:ring-2 focus:ring-[#1D2981]/20"
+                />
               </div>
             ) : null}
             <ModalActions>

@@ -1,6 +1,7 @@
-import { isAxiosError } from "axios";
 import { api } from "@/lib/api";
+import { isApiNotFoundError } from "@/lib/api-errors";
 import type {
+  ApiCustodyStatus,
   ApiItemStatus,
   ApiPostListResponse,
   ApiPostRecord,
@@ -13,6 +14,7 @@ interface ListPostsParams {
   item_type?: "found" | "missing";
   status?: string;
   item_status?: string;
+  custody_status?: ApiCustodyStatus;
   poster_id?: string;
   item_id?: string;
   linked_item_id?: string;
@@ -57,7 +59,7 @@ export async function updatePostStatus(
 
 export async function updateItemStatus(
   itemId: string,
-  payload: { status: ApiItemStatus }
+  payload: { status: ApiItemStatus; discard_reason?: string }
 ): Promise<{ success: boolean }> {
   const { data } = await api.put<{ success: boolean }>(`/posts/items/${itemId}/status`, payload);
   return data;
@@ -69,18 +71,7 @@ export async function getPost(postId: string): Promise<ApiPostRecord> {
 }
 
 function isMissingFullPostError(error: unknown): boolean {
-  if (!isAxiosError(error)) return false;
-  if (error.response?.status === 404) return true;
-
-  const responseMessage =
-    typeof error.response?.data === "object" &&
-    error.response?.data &&
-    "message" in error.response.data &&
-    typeof error.response.data.message === "string"
-      ? error.response.data.message
-      : null;
-
-  return responseMessage === "Post not found";
+  return isApiNotFoundError(error);
 }
 
 function mapPostToFallbackDetails(post: ApiPostRecord): ApiPostRecordDetails {
@@ -120,6 +111,8 @@ function mapPostToFallbackDetails(post: ApiPostRecord): ApiPostRecordDetails {
     claim_processed_by_user_type: null,
     linked_lost_item_id: null,
     returned_at: null,
+    accepted_by_guard_name: null,
+    accepted_by_guard_email: null,
   };
 }
 

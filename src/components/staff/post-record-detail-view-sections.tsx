@@ -6,7 +6,7 @@ import { ArrowLeft, Bell, ChevronDown, CircleUserRound, Copy, Handshake, Mail, R
 import { PhotoView } from "react-photo-view";
 import { StaffPosterName } from "@/components/staff/staff-poster-name";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
-import { toDisplayLabel } from "@/lib/format-utils";
+import { normalizeValue, toDisplayLabel } from "@/lib/format-utils";
 import type { ApiCustodyHistoryEntry, ApiCustodyHistoryResponse, ApiCustodyStatus, ApiItemStatus, ApiPostRecordDetails } from "@/types/post-record-api";
 import type { LinkedPostRecord } from "@/types/ui";
 
@@ -32,6 +32,7 @@ function getCustodyEventAccentClass(event: ApiCustodyHistoryEntry): string {
     case "guard_rejected":
     case "attempt_cancelled":
     case "session_timed_out":
+    case "discarded":
       return "bg-rose-600";
     case "handover_attempted":
       return "bg-amber-500";
@@ -40,17 +41,23 @@ function getCustodyEventAccentClass(event: ApiCustodyHistoryEntry): string {
   }
 }
 
-function hasExpandableAttemptDetails(entry: ApiCustodyHistoryEntry): boolean {
-  return (
-    entry.event_type === "handover_attempted" &&
-    Boolean(
-      entry.attempt_number ||
-      entry.guard_post_name ||
-      entry.full_location_name ||
-      entry.actor_name ||
-      entry.handover_image_url
-    )
+function hasExpandableEntryDetails(entry: ApiCustodyHistoryEntry): boolean {
+  const hasSharedDetails = Boolean(
+    entry.attempt_number ||
+    entry.guard_post_name ||
+    entry.full_location_name ||
+    entry.actor_name
   );
+
+  switch (entry.event_type) {
+    case "handover_attempted":
+      return hasSharedDetails || Boolean(entry.handover_image_url);
+    case "guard_accepted":
+    case "guard_rejected":
+      return hasSharedDetails || Boolean(entry.decision_reason);
+    default:
+      return false;
+  }
 }
 
 export function PostRecordDetailHeader(props: {
@@ -231,6 +238,8 @@ export function LinkedPostPanel(props: {
 }
 
 export function PostRecordDetailsPanel(props: { record: ApiPostRecordDetails; normalizedItemStatus: ApiItemStatus }) {
+  const isWithGuard = normalizeValue(props.record.custody_status) === "with_guard";
+
   return (
     <article className="min-h-0 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-4 lg:col-start-9 lg:row-start-2">
       <h2 className="text-lg font-semibold text-slate-900">Post Details</h2>
@@ -242,6 +251,16 @@ export function PostRecordDetailsPanel(props: { record: ApiPostRecordDetails; no
         {props.record.accepted_on_date_local ? <p><span className="font-medium text-slate-700">Accepted:</span> {formatDateTimeInPhilippineTime(props.record.accepted_on_date_local)}</p> : null}
         {props.record.rejection_reason ? <p><span className="font-medium text-slate-700">Rejection reason:</span> {props.record.rejection_reason}</p> : null}
       </div>
+      {isWithGuard ? (
+        <>
+          <h3 className="mt-5 text-lg font-semibold text-slate-900">Guard Handover</h3>
+          <p className="mt-1 text-sm text-slate-600">Guard who accepted the handover for this item.</p>
+          <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-slate-600">
+            <p><span className="font-medium text-slate-700">Name:</span> {props.record.accepted_by_guard_name ?? "Not available"}</p>
+            <p><span className="font-medium text-slate-700">Email:</span> {props.record.accepted_by_guard_email ?? "Not available"}</p>
+          </div>
+        </>
+      ) : null}
       <h3 className="mt-5 text-lg font-semibold text-slate-900">Poster Details</h3>
       <p className="mt-1 text-sm text-slate-600">Contact information of the user who posted this item.</p>
       <div className="mt-2 text-sm text-slate-600">
@@ -356,7 +375,7 @@ export function PostRecordCustodyPanel(props: {
 function PostRecordCustodyEntry(props: { entry: ApiCustodyHistoryEntry }) {
   const { entry } = props;
   const [expanded, setExpanded] = useState(false);
-  const canExpand = hasExpandableAttemptDetails(entry);
+  const canExpand = hasExpandableEntryDetails(entry);
 
   return (
     <div className="rounded-2xl border border-slate-200 p-4">
@@ -374,13 +393,18 @@ function PostRecordCustodyEntry(props: { entry: ApiCustodyHistoryEntry }) {
                   Guard post: {entry.full_location_name ?? entry.guard_post_name}
                 </p>
               ) : null}
+              {entry.discard_reason ? (
+                <div className="mt-3 rounded-2xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                  <span className="font-semibold">Discarded reason:</span> {entry.discard_reason}
+                </div>
+              ) : null}
             </div>
 
             {canExpand ? (
               <button
                 type="button"
                 aria-expanded={expanded}
-                aria-label={expanded ? "Hide handover details" : "Show handover details"}
+                aria-label={expanded ? "Hide event details" : "Show event details"}
                 onClick={() => setExpanded((current) => !current)}
                 className="rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
               >
@@ -410,7 +434,16 @@ function PostRecordCustodyEntry(props: { entry: ApiCustodyHistoryEntry }) {
                 ) : null}
               </div>
 
-              {entry.handover_image_url ? (
+              {entry.decision_reason ? (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Guard Note
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap">{entry.decision_reason}</p>
+                </div>
+              ) : null}
+
+              {entry.event_type === "handover_attempted" && entry.handover_image_url ? (
                 <div className="mt-4">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     Handover Image

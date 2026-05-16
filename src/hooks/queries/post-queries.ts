@@ -93,6 +93,7 @@ export function usePostRecords(params: PostRecordsParams) {
         ...(params.itemType ? { item_type: params.itemType } : {}),
         ...(params.postStatus ? { status: params.postStatus } : {}),
         ...(params.itemStatus ? { item_status: params.itemStatus } : {}),
+        ...(params.custodyStatus ? { custody_status: params.custodyStatus } : {}),
         ...(pageParam.length > 0 ? { exclude_ids: pageParam } : {}),
         limit: pageSize,
         order_by: "submission_date",

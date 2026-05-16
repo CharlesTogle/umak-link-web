@@ -50,12 +50,22 @@ export type ApiCustodyStatus =
   | "with_guard"
   | "in_security_office"
   | "claimed_by_student"
-  | "under_investigation";
+  | "under_investigation"
+  | "discarded";
 
 export type ApiEditableClaimedCustodyStatus =
   | "in_security_office"
   | "under_investigation"
   | "claimed_by_student";
+
+export type ApiEditableUntrackedCustodyStatus =
+  | "with_reporter"
+  | "with_guard"
+  | "in_security_office";
+
+export type ApiEditablePostCustodyStatus =
+  | ApiEditableClaimedCustodyStatus
+  | ApiEditableUntrackedCustodyStatus;
 
 export type ApiCustodyHistoryEventType =
   | "item_reported"
@@ -67,7 +77,8 @@ export type ApiCustodyHistoryEventType =
   | "attempt_cancelled"
   | "under_investigation"
   | "physical_take_reported"
-  | "claimed_by_student";
+  | "claimed_by_student"
+  | "discarded";
 
 export interface ApiPostRecordDetails {
   post_id: number | string;
@@ -103,6 +114,8 @@ export interface ApiPostRecordDetails {
   claim_processed_by_user_type?: "User" | "Staff" | "Admin" | "Guard" | null;
   linked_lost_item_id: string | null;
   returned_at: string | null;
+  accepted_by_guard_name?: string | null;
+  accepted_by_guard_email?: string | null;
   custody_status?: ApiCustodyStatus | null;
 }
 
@@ -121,6 +134,8 @@ export interface ApiCustodyHistoryEntry {
   handover_image_url: string | null;
   actor_user_id: string | null;
   actor_name: string | null;
+  decision_reason?: string | null;
+  discard_reason?: string | null;
 }
 
 export interface ApiCustodyHistoryResponse {
@@ -154,9 +169,9 @@ export interface ApiNotifyGuardResponse {
   requested_at: string;
 }
 
-export interface ApiUpdateClaimedCustodyStatusResponse {
+export interface ApiUpdatePostCustodyStatusResponse {
   post_id: number;
   item_id: string;
-  custody_status: ApiEditableClaimedCustodyStatus;
+  custody_status: ApiEditablePostCustodyStatus;
   updated_at: string;
 }

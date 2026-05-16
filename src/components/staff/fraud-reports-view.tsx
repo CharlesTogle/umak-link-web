@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 import { CustomToast } from "@/components/ui/custom-toast";
 import { toTimestampMillis } from "@/lib/date-time-helpers";
 import { fraudReportKeys, useFraudReports } from "@/hooks/queries/fraud-report-queries";
-import { resolveFraudReport, updateFraudReportStatus } from "@/services/fraud-reports-service";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { sendFraudReportOpenedEmails } from "@/services/fraud-report-email-service";
+import { getPostFull } from "@/services/posts-service";
+import { getFraudReport, resolveFraudReport, updateFraudReportStatus } from "@/services/fraud-reports-service";
 import {
   FraudReportsFeed,
   FraudReportsRejectModal,
@@ -47,6 +50,7 @@ function getSortValue(report: FraudReport): number {
 export function FraudReportsView() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useCurrentUser();
   const [filters, setFilters] = useState<FraudReportFilters>({ status: "all" });
   const [sortDir, setSortDir] = useState<FraudReportSortDirection>("desc");
   const [toast, setToast] = useState<{ message: string; tone: "success" | "danger" } | null>(null);
@@ -85,6 +89,33 @@ export function FraudReportsView() {
     if (action === "open") {
       updateFraudReportStatus(report.reportId, "open")
         .then(async () => {
+          if (user?.user_id) {
+            try {
+              const fullReport = await getFraudReport(report.reportId);
+              const postDetails = await getPostFull(String(fullReport.post_id)).catch(() => null);
+              const emailResults = await sendFraudReportOpenedEmails({
+                claimerEmail: fullReport.claimer_school_email ?? null,
+                claimerName: fullReport.claimer_name ?? null,
+                claimProcessorEmail: fullReport.claim_processed_by_email ?? null,
+                claimProcessorName: fullReport.claim_processed_by_name ?? null,
+                guardEmail: postDetails?.accepted_by_guard_email ?? null,
+                guardName: postDetails?.accepted_by_guard_name ?? null,
+                postTitle: fullReport.item_name ?? "Unknown Item",
+                reporterName: fullReport.reporter_name ?? "the reporter",
+                staffName: user.user_name ?? "Staff",
+                staffUuid: user.user_id,
+              });
+              const failedEmails = emailResults.filter((result) => !result.success);
+              if (failedEmails.length > 0) {
+                console.error("Failed to send one or more fraud report emails", {
+                  failedEmails,
+                  reportId: report.reportId,
+                });
+              }
+            } catch (error) {
+              console.error("Failed to prepare fraud report emails", error);
+            }
+          }
           await invalidateReports();
           setToast({ message: "Fraud report opened", tone: "success" });
         })

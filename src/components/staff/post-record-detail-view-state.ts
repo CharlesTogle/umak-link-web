@@ -1,5 +1,5 @@
 import type {
-  ApiEditableClaimedCustodyStatus,
+  ApiEditablePostCustodyStatus,
   ApiItemStatus,
   ApiPostStatus,
 } from "@/types/post-record-api";
@@ -14,7 +14,8 @@ export interface PostRecordDetailUiState {
   showNotifyModal: boolean;
   selectedStatus: ApiPostStatus | null;
   selectedItemStatus: ApiItemStatus | null;
-  selectedCustodyStatus: ApiEditableClaimedCustodyStatus | null;
+  selectedCustodyStatus: ApiEditablePostCustodyStatus | null;
+  discardReason: string;
 }
 
 export type PostRecordDetailUiAction =
@@ -23,7 +24,8 @@ export type PostRecordDetailUiAction =
   | { type: "set_modal"; modal: "showStatusModal" | "showRejectModal" | "showUnclaimModal" | "showNotifyModal"; value: boolean }
   | { type: "set_selected_status"; value: ApiPostStatus | null }
   | { type: "set_selected_item_status"; value: ApiItemStatus | null }
-  | { type: "set_selected_custody_status"; value: ApiEditableClaimedCustodyStatus | null }
+  | { type: "set_selected_custody_status"; value: ApiEditablePostCustodyStatus | null }
+  | { type: "set_discard_reason"; value: string }
   | { type: "clear_selection" };
 
 export function postRecordDetailUiReducer(
@@ -43,7 +45,17 @@ export function postRecordDetailUiReducer(
       return { ...state, selectedItemStatus: action.value };
     case "set_selected_custody_status":
       return { ...state, selectedCustodyStatus: action.value };
+    case "set_discard_reason":
+      return { ...state, discardReason: action.value };
     case "clear_selection":
-      return { ...state, selectedStatus: null, selectedItemStatus: null, selectedCustodyStatus: null };
+      return {
+        ...state,
+        selectedStatus: null,
+        selectedItemStatus: null,
+        selectedCustodyStatus: null,
+        discardReason: "",
+      };
+    default:
+      return state;
   }
 }

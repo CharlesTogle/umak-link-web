@@ -23,3 +23,20 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
 
   return data.results.map(normalizeUserSearchResult);
 }
+
+export async function resolveUserByClaimCode(
+  code: string,
+  options?: { foundPostId?: number }
+): Promise<UserSearchResult> {
+  const { data } = await api.get<RawUserSearchResult>(
+    `/users/claim-code/${encodeURIComponent(code)}`,
+    {
+      params:
+        typeof options?.foundPostId === "number" &&
+        Number.isFinite(options.foundPostId)
+          ? { found_post_id: options.foundPostId }
+          : undefined,
+    }
+  );
+  return normalizeUserSearchResult(data);
+}

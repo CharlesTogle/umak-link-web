@@ -8,7 +8,9 @@ import { normalizeValue } from "@/lib/format-utils";
 import { useFraudReportDetail } from "@/hooks/queries/fraud-report-queries";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useLostItemLookup } from "@/hooks/queries/post-queries";
+import { sendFraudReportOpenedEmails } from "@/services/fraud-report-email-service";
 import { sendNotification } from "@/services/notifications-service";
+import { getPostFull } from "@/services/posts-service";
 import { deleteFraudReport, resolveFraudReport, updateFraudReportStatus } from "@/services/fraud-reports-service";
 import {
   FraudReportHeader,
@@ -77,6 +79,28 @@ export function FraudReportDetailView({ reportId }: { reportId: string }) {
     dispatchUi({ type: "set_processing", value: true });
     try {
       await updateFraudReportStatus(report.report_id, "open");
+      if (user?.user_id) {
+        const postDetails = await getPostFull(String(report.post_id)).catch(() => null);
+        const emailResults = await sendFraudReportOpenedEmails({
+          claimerEmail: report.claimer_school_email ?? null,
+          claimerName: report.claimer_name ?? null,
+          claimProcessorEmail: report.claim_processed_by_email ?? null,
+          claimProcessorName: report.claim_processed_by_name ?? null,
+          guardEmail: postDetails?.accepted_by_guard_email ?? null,
+          guardName: postDetails?.accepted_by_guard_name ?? null,
+          postTitle: report.item_name ?? "Unknown Item",
+          reporterName: report.reporter_name ?? "the reporter",
+          staffName: user.user_name ?? "Staff",
+          staffUuid: user.user_id,
+        });
+        const failedEmails = emailResults.filter((result) => !result.success);
+        if (failedEmails.length > 0) {
+          console.error("Failed to send one or more fraud report emails", {
+            failedEmails,
+            reportId: report.report_id,
+          });
+        }
+      }
       if (report.reporter_id) {
         await Promise.allSettled([
           sendNotification({

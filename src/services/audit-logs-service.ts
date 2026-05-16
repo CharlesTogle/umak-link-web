@@ -100,7 +100,7 @@ export async function recordPortalLoginAudit(
     table_name: "user_table",
     record_id: user.user_id,
     changes: {
-      message: `${user.user_type} ${displayName} signed in to the ${getPortalLoginDestination(user.user_type)}`,
+      message: `${user.user_type} ${displayName} signed into ${getPortalLoginDestination(user.user_type)}`,
       login_source: "admin_staff_portal",
       user_type: user.user_type,
       user_name: user.user_name,

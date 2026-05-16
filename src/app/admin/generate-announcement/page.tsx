@@ -11,7 +11,6 @@ import { CustomToast } from "@/components/ui/custom-toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { logError } from "@/lib/error-utils";
 import { createAnnouncement } from "@/services/announcements-service";
-import { insertAuditLog } from "@/services/audit-logs-service";
 import { uploadAndGetPublicUrl } from "@/services/storage-service";
 
 interface Toast {
@@ -114,25 +113,6 @@ export default function AdminGenerateAnnouncementPage() {
         description: description.trim(),
         image_url: imageUrl,
       });
-
-      // Insert audit log
-      try {
-        await insertAuditLog({
-          user_id: user.user_id,
-          action: "create_announcement",
-          table_name: "global_announcement_table",
-          record_id: user.user_id,
-          changes: {
-            title: title.trim(),
-            message: `${user.user_name || "Admin"} has sent a global announcement`,
-            description: description.trim(),
-            timestamp: new Date().toISOString(),
-          },
-        });
-      } catch (auditError) {
-        logError("Failed to insert audit log:", auditError);
-        // Continue even if audit log fails
-      }
 
       showToast("Announcement posted and notifications sent.", "success");
 

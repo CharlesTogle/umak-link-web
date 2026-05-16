@@ -198,7 +198,7 @@ test.describe('Admin Audit Logs', () => {
         table_name: 'notification_table',
         record_id: 'notification-1',
         changes: {
-          message: 'Charles Nathaniel Togle sent notification to user',
+          message: 'Charles Nathaniel Togle sent "Post Accepted" to Juan Dela Cruz',
           timestamp: '2026-05-15T03:52:00.000Z',
           notification_id: 'bac15e42-a36f-40cc-80d8-62033a7bcdc3',
           notification_type: 'accept',
@@ -223,7 +223,7 @@ test.describe('Admin Audit Logs', () => {
         table_name: 'custody_attempt_table',
         record_id: 'attempt-1',
         changes: {
-          message: 'Custody Security Office Received',
+          message: 'Security Office received Teal Stickered Campus Lunch Box',
           item_name: 'Teal Stickered Campus Lunch Box',
           item_id: '3a71a5b4-0934-4ae5-ab3d-5caf123e64e2',
           post_id: 2408,
@@ -245,7 +245,7 @@ test.describe('Admin Audit Logs', () => {
         table_name: 'qr_code_session_table',
         record_id: 'session-1',
         changes: {
-          message: 'Handover QR Code Scanned',
+          message: 'Guard Maricar Santos scanned the handover QR for Silver Water Bottle',
           guard_name: 'Maricar Santos',
           item_name: 'Silver Water Bottle',
           item_id: '95e9e59f-4945-4a01-b668-c617585da0ea',
@@ -268,7 +268,7 @@ test.describe('Admin Audit Logs', () => {
         table_name: 'custody_attempt_table',
         record_id: 'attempt-2',
         changes: {
-          message: 'Guard Maricar Santos Accepted Handover',
+          message: 'Guard Maricar Santos accepted the handover for Canvas Tote Bag',
           guard_name: 'Maricar Santos',
           item_name: 'Canvas Tote Bag',
           item_id: 'f1f75154-5b28-43ec-8a21-be4d60f4d170',
@@ -293,38 +293,38 @@ test.describe('Admin Audit Logs', () => {
     await expect(page.getByText('May 15, 2026, 11:52 AM').first()).toBeVisible();
 
     const notificationCard = page
-      .getByRole('button', { name: /Charles Nathaniel Togle sent notification to user/i })
+      .getByRole('button', { name: /Charles Nathaniel Togle sent "Post Accepted" to Juan Dela Cruz/i })
       .locator('xpath=..');
-    await notificationCard.getByRole('button', { name: /Charles Nathaniel Togle sent notification to user/i }).click();
+    await notificationCard.getByRole('button', { name: /Charles Nathaniel Togle sent "Post Accepted" to Juan Dela Cruz/i }).click();
 
     await expect(notificationCard).toContainText('Recipient Name: Juan Dela Cruz');
     await expect(notificationCard).toContainText('Content: Your post has been accepted.');
     await expect(notificationCard).toContainText('Timestamp: May 15, 2026, 11:52 AM');
 
     const securityOfficeCard = page
-      .getByRole('button', { name: /May 15, 2026, 11:52 AM Custody Security Office Received/i })
+      .getByRole('button', { name: /May 15, 2026, 11:52 AM Security Office received Teal Stickered Campus Lunch Box/i })
       .locator('xpath=..');
     await securityOfficeCard
-      .getByRole('button', { name: /May 15, 2026, 11:52 AM Custody Security Office Received/i })
+      .getByRole('button', { name: /May 15, 2026, 11:52 AM Security Office received Teal Stickered Campus Lunch Box/i })
       .click();
 
     await expect(securityOfficeCard).toContainText('Item Name: Teal Stickered Campus Lunch Box');
 
     const qrScannedCard = page
-      .getByRole('button', { name: /May 15, 2026, 11:30 AM Handover QR Code Scanned/i })
+      .getByRole('button', { name: /May 15, 2026, 11:30 AM Guard Maricar Santos scanned the handover QR for Silver Water Bottle/i })
       .locator('xpath=..');
     await qrScannedCard
-      .getByRole('button', { name: /May 15, 2026, 11:30 AM Handover QR Code Scanned/i })
+      .getByRole('button', { name: /May 15, 2026, 11:30 AM Guard Maricar Santos scanned the handover QR for Silver Water Bottle/i })
       .click();
 
     await expect(qrScannedCard).toContainText('Guard Name: Maricar Santos');
     await expect(qrScannedCard).toContainText('Item Name: Silver Water Bottle');
 
     const decisionCard = page
-      .getByRole('button', { name: /May 15, 2026, 04:52 PM Guard Maricar Santos Accepted Handover/i })
+      .getByRole('button', { name: /May 15, 2026, 04:52 PM Guard Maricar Santos accepted the handover for Canvas Tote Bag/i })
       .locator('xpath=..');
     await decisionCard
-      .getByRole('button', { name: /May 15, 2026, 04:52 PM Guard Maricar Santos Accepted Handover/i })
+      .getByRole('button', { name: /May 15, 2026, 04:52 PM Guard Maricar Santos accepted the handover for Canvas Tote Bag/i })
       .click();
 
     await expect(decisionCard).toContainText('Guard Name: Maricar Santos');

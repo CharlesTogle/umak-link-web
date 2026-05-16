@@ -256,7 +256,7 @@ export default function AdminAuditLogPage() {
       {/* Two-column layout */}
       <div className="grid h-[calc(100%-4rem)] min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
         {/* Left Column - Audit Logs List */}
-        <div className="space-y-4 overflow-y-auto pr-1 lg:col-span-8">
+        <div className="min-w-0 space-y-4 overflow-y-auto pr-1 lg:col-span-8">
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -383,7 +383,7 @@ export default function AdminAuditLogPage() {
         </div>
 
         {/* Right Column - Filters & Sorting */}
-        <div className="space-y-3 overflow-y-auto pr-1 lg:col-span-4">
+        <div className="min-w-0 space-y-3 overflow-y-auto pr-1 lg:col-span-4">
           {/* Date Range Filter */}
           <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
             <CardContent className="p-4">

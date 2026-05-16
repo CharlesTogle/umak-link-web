@@ -18,6 +18,9 @@ export interface ClaimUiState {
   showManualInput: boolean;
   manualName: string;
   manualEmail: string;
+  manualClaimCode: string;
+  manualQrSessionId: string;
+  manualQrSessionToken: string;
   showConfirmModal: boolean;
   showCancelModal: boolean;
 }
@@ -30,6 +33,9 @@ export type ClaimUiAction =
   | { type: "toggle_manual_input" }
   | { type: "set_manual_name"; value: string }
   | { type: "set_manual_email"; value: string }
+  | { type: "set_manual_claim_code"; value: string }
+  | { type: "set_manual_qr_session_id"; value: string }
+  | { type: "set_manual_qr_session_token"; value: string }
   | { type: "set_modal"; modal: "showConfirmModal" | "showCancelModal"; value: boolean };
 
 export function normalizePhoneNumber(input: string): string | null {
@@ -62,7 +68,15 @@ export function uiReducer(state: ClaimUiState, action: ClaimUiAction): ClaimUiSt
       return { ...state, manualName: action.value };
     case "set_manual_email":
       return { ...state, manualEmail: action.value };
+    case "set_manual_claim_code":
+      return { ...state, manualClaimCode: action.value };
+    case "set_manual_qr_session_id":
+      return { ...state, manualQrSessionId: action.value };
+    case "set_manual_qr_session_token":
+      return { ...state, manualQrSessionToken: action.value };
     case "set_modal":
       return { ...state, [action.modal]: action.value };
+    default:
+      return state;
   }
 }

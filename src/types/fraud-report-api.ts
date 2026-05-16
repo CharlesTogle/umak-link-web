@@ -42,6 +42,7 @@ export interface ApiFraudReportPublic {
   claim_processed_by_name?: string | null;
   claim_processed_by_email?: string | null;
   claim_processed_by_profile_picture_url?: string | null;
+  claim_processed_by_user_type?: "User" | "Staff" | "Admin" | "Guard" | null;
   reporter_email?: string | null;
   poster_email?: string | null;
   fraud_reviewer_profile_picture_url?: string | null;

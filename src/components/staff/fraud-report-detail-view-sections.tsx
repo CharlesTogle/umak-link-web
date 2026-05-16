@@ -15,6 +15,22 @@ interface CloseChoice {
   deleteClaim: boolean;
 }
 
+function getClaimProcessedByLabel(
+  userType?: "User" | "Staff" | "Admin" | "Guard" | null
+): string {
+  switch (userType) {
+    case "Guard":
+      return "Claim Processed by Guard";
+    case "Admin":
+      return "Claim Processed by Admin";
+    case "User":
+      return "Claim Processed by User";
+    case "Staff":
+    default:
+      return "Claim Processed by Staff";
+  }
+}
+
 export function FraudReportHeader(props: {
   report: ApiFraudReportPublic;
   getStatusBadgeClass: (status: string) => string;
@@ -202,7 +218,7 @@ export function FraudReportSidebar(props: { report: ApiFraudReportPublic; report
 
       <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Claim Credentials</h2>
-        <p className="mt-1 text-sm text-slate-600">Information about the claimer and staff who processed the claim.</p>
+        <p className="mt-1 text-sm text-slate-600">Information about the claimer and the user who processed the claim.</p>
         <div className="mt-3 space-y-4 text-sm text-slate-600">
           <div>
             <p className="font-semibold text-slate-800">Claimer</p>
@@ -212,7 +228,7 @@ export function FraudReportSidebar(props: { report: ApiFraudReportPublic; report
             {report.claimed_at ? <p className="text-xs text-slate-500">Claimed at: {formatDateTimeInPhilippineTime(report.claimed_at, "Unknown")}</p> : null}
           </div>
           <div>
-            <p className="font-semibold text-slate-800">Claim Approved by Staff</p>
+            <p className="font-semibold text-slate-800">{getClaimProcessedByLabel(report.claim_processed_by_user_type)}</p>
             <p>{report.claim_processed_by_name ?? "Not yet approved"}</p>
             <p>{report.claim_processed_by_email ?? "Not yet approved"}</p>
           </div>

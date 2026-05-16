@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { PORTAL_LOGIN_REJECTION_MESSAGE, isPortalLoginAllowedUserType } from "@/lib/portal-auth";
 import { clearStoredToken } from "@/lib/token-storage";
 import { supabase } from "@/lib/supabase";
 import type { AuthStatus, AuthUser } from "@/types/auth";
@@ -44,6 +45,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       const user = await fetchCurrentUser();
 
+      if (!isPortalLoginAllowedUserType(user.user_type)) {
+        clearStoredToken();
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
+
+        set({
+          user: null,
+          status: "error",
+          error: PORTAL_LOGIN_REJECTION_MESSAGE,
+          hasFetched: true,
+        });
+        return;
+      }
+
       set({
         user,
         status: "ready",
@@ -80,6 +96,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (supabase) {
       void supabase.auth.signOut();
     }
-    set(initialState);
+    set({
+      ...initialState,
+      hasFetched: true,
+    });
   },
 }));

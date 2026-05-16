@@ -1,4 +1,4 @@
-export type PortalUserType = "User" | "Staff" | "Admin";
+export type PortalUserType = "User" | "Staff" | "Admin" | "Guard";
 export type AuthStatus = "idle" | "loading" | "ready" | "error";
 
 export interface AuthUser {

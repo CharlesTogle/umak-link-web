@@ -2,8 +2,11 @@
  * Combined test fixture that merges auth and API fixtures
  */
 import { test as base, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { AuthUser, AuthMeResponse } from '@/types/auth';
 import { testUsers } from '../helpers/test-data';
+
+const FALLBACK_SUPABASE_PROJECT_REF = 'yqgpyvfpgvgecjlpzzgd';
 
 /**
  * Create a mock JWT token
@@ -23,12 +26,95 @@ function createMockJWT(user: AuthUser): string {
   return `${header}.${payload}.${signature}`;
 }
 
+function getSupabaseStorageKey(): string | null {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!supabaseUrl) {
+    return `sb-${FALLBACK_SUPABASE_PROJECT_REF}-auth-token`;
+  }
+
+  try {
+    const hostname = new URL(supabaseUrl).hostname;
+    const projectRef = hostname.split('.')[0];
+    return projectRef
+      ? `sb-${projectRef}-auth-token`
+      : `sb-${FALLBACK_SUPABASE_PROJECT_REF}-auth-token`;
+  } catch {
+    return `sb-${FALLBACK_SUPABASE_PROJECT_REF}-auth-token`;
+  }
+}
+
+function createMockSupabaseSession(user: AuthUser, token: string) {
+  const expiresAt = Math.floor(Date.now() / 1000) + 86400 * 7;
+
+  return {
+    access_token: token,
+    refresh_token: 'mock_refresh_token',
+    expires_at: expiresAt,
+    expires_in: 86400 * 7,
+    token_type: 'bearer',
+    user: {
+      id: user.user_id,
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: user.email,
+      phone: '',
+      app_metadata: {
+        provider: 'google',
+        providers: ['google'],
+      },
+      user_metadata: {
+        full_name: user.user_name,
+        avatar_url: user.profile_picture_url,
+        user_type: user.user_type,
+      },
+      identities: [],
+      created_at: '2026-05-16T08:00:00.000Z',
+      updated_at: '2026-05-16T08:00:00.000Z',
+    },
+  };
+}
+
+async function seedPortalSession(
+  page: Page,
+  user: AuthUser,
+  token: string
+): Promise<void> {
+  const supabaseStorageKey = getSupabaseStorageKey();
+  const supabaseSession = createMockSupabaseSession(user, token);
+
+  await page.addInitScript(
+    ({ tokenKey, tokenValue, roleKey, roleValue, storageKey, storageValue }) => {
+      if (window.sessionStorage.getItem('__portal_auth_seeded__') === '1') {
+        return;
+      }
+
+      localStorage.setItem(tokenKey, tokenValue);
+      localStorage.setItem(roleKey, roleValue);
+
+      if (storageKey && storageValue) {
+        localStorage.setItem(storageKey, storageValue);
+      }
+
+      window.sessionStorage.setItem('__portal_auth_seeded__', '1');
+    },
+    {
+      tokenKey: 'umak_link_web_api_token',
+      tokenValue: token,
+      roleKey: 'umak_link_web_role',
+      roleValue: user.user_type,
+      storageKey: supabaseStorageKey,
+      storageValue: supabaseStorageKey ? JSON.stringify(supabaseSession) : null,
+    }
+  );
+}
+
 /**
  * Combined fixtures for auth and API
  */
 type CombinedFixtures = {
   adminUser: AuthUser;
   staffUser: AuthUser;
+  guardUser: AuthUser;
   regularUser: AuthUser;
   loginAsAdmin: () => Promise<void>;
   loginAsStaff: () => Promise<void>;
@@ -48,6 +134,7 @@ type CombinedFixtures = {
 export const test = base.extend<CombinedFixtures>({
   adminUser: testUsers.admin,
   staffUser: testUsers.staff,
+  guardUser: testUsers.guard,
   regularUser: testUsers.user,
 
   loginAsAdmin: async ({ page, adminUser }, use) => {
@@ -56,14 +143,11 @@ export const test = base.extend<CombinedFixtures>({
       await page.route('**/auth/me', (route) => {
         route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: adminUser }) });
       });
+      await seedPortalSession(page, adminUser, token);
       await page.context().addCookies([
         { name: 'umak_link_web_api_token', value: token, url: 'http://localhost:3000', sameSite: 'Lax' },
       ]);
       await page.goto('http://localhost:3000', { waitUntil: 'commit' });
-      await page.evaluate(
-        ({ k, v, rk, rv }) => { localStorage.setItem(k, v); localStorage.setItem(rk, rv); },
-        { k: 'umak_link_web_api_token', v: token, rk: 'umak_link_web_role', rv: adminUser.user_type }
-      );
     };
     await use(login);
   },
@@ -74,14 +158,11 @@ export const test = base.extend<CombinedFixtures>({
       await page.route('**/auth/me', (route) => {
         route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: staffUser }) });
       });
+      await seedPortalSession(page, staffUser, token);
       await page.context().addCookies([
         { name: 'umak_link_web_api_token', value: token, url: 'http://localhost:3000', sameSite: 'Lax' },
       ]);
       await page.goto('http://localhost:3000', { waitUntil: 'commit' });
-      await page.evaluate(
-        ({ k, v, rk, rv }) => { localStorage.setItem(k, v); localStorage.setItem(rk, rv); },
-        { k: 'umak_link_web_api_token', v: token, rk: 'umak_link_web_role', rv: staffUser.user_type }
-      );
     };
     await use(login);
   },
@@ -89,14 +170,11 @@ export const test = base.extend<CombinedFixtures>({
   loginAsUser: async ({ page, regularUser }, use) => {
     const login = async () => {
       const token = createMockJWT(regularUser);
+      await seedPortalSession(page, regularUser, token);
       await page.context().addCookies([
         { name: 'umak_link_web_api_token', value: token, url: 'http://localhost:3000', sameSite: 'Lax' },
       ]);
       await page.goto('http://localhost:3000', { waitUntil: 'commit' });
-      await page.evaluate(
-        ({ k, v, rk, rv }) => { localStorage.setItem(k, v); localStorage.setItem(rk, rv); },
-        { k: 'umak_link_web_api_token', v: token, rk: 'umak_link_web_role', rv: regularUser.user_type }
-      );
     };
     await use(login);
   },
@@ -138,24 +216,13 @@ export const test = base.extend<CombinedFixtures>({
           sameSite: 'Lax',
         },
       ]);
+      await seedPortalSession(page, user, token);
 
       // Navigate to establish origin, THEN set localStorage via evaluate.
       // addInitScript was wrong: it re-runs on every subsequent navigation,
       // so logout + goto('/') would re-inject the token.
       // waitUntil: 'commit' returns as soon as navigation starts, minimising side effects.
       await page.goto('http://localhost:3000', { waitUntil: 'commit' });
-      await page.evaluate(
-        ({ tokenKey, tokenValue, roleKey, roleValue }) => {
-          localStorage.setItem(tokenKey, tokenValue);
-          localStorage.setItem(roleKey, roleValue);
-        },
-        {
-          tokenKey: 'umak_link_web_api_token',
-          tokenValue: token,
-          roleKey: 'umak_link_web_role',
-          roleValue: user.user_type,
-        }
-      );
     };
     await use(setToken);
   },

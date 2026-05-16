@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "UMak-LINK Web",
-  description: "Admin and staff web portal for UMak-LINK",
+  description: "Admin, staff, and guard web portal for UMak-LINK",
 };
 
 export const viewport: Viewport = {

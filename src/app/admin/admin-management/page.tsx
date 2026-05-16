@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CustomToast } from "@/components/ui/custom-toast";
-import { UserCircle2, Trash2, ShieldCheck, Users, Download, CheckSquare, Square, MoreVertical, Pencil, ChevronLeft, ChevronRight, Calendar, Clock, Search, Filter, ArrowUpDown } from "lucide-react";
+import { UserCircle2, Trash2, Shield, ShieldCheck, Users, Download, CheckSquare, Square, MoreVertical, Pencil, ChevronLeft, ChevronRight, Calendar, Clock, Search, Filter, ArrowUpDown } from "lucide-react";
 import type { PortalUserType } from "@/types/auth";
 import { fetchUsers, updateUserRole } from "@/services/admin-service";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -234,7 +234,7 @@ function EditRoleModalContent({
 }) {
   const [selectedRole, setSelectedRole] = useState<PortalUserType>(user.user_type);
 
-  const roles: PortalUserType[] = ["User", "Staff", "Admin"];
+  const roles: PortalUserType[] = ["User", "Staff", "Admin", "Guard"];
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4">
@@ -268,6 +268,7 @@ function EditRoleModalContent({
                   {role === "User" && "Basic access - can view and report items"}
                   {role === "Staff" && "Can manage posts, claims, and reports"}
                   {role === "Admin" && "Full system access and control"}
+                  {role === "Guard" && "Can review custody handovers and decisions"}
                 </p>
               </div>
             </label>
@@ -295,6 +296,7 @@ export default function AdminManagementPage() {
   const { user: currentUser } = useCurrentUser();
   const [admins, setAdmins] = useState<UserListItem[]>([]);
   const [staff, setStaff] = useState<UserListItem[]>([]);
+  const [guards, setGuards] = useState<UserListItem[]>([]);
   const [users, setUsers] = useState<UserListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -335,10 +337,11 @@ export default function AdminManagementPage() {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
-      const response = await fetchUsers(["Admin", "Staff"]);
+      const response = await fetchUsers(["Admin", "Staff", "Guard"]);
 
       const adminList = response.users.filter((u) => u.user_type === "Admin");
       const staffList = response.users.filter((u) => u.user_type === "Staff");
+      const guardList = response.users.filter((u) => u.user_type === "Guard");
 
       // Sort admins - current user first
       const sortedAdmins = adminList.sort((a, b) => {
@@ -349,6 +352,7 @@ export default function AdminManagementPage() {
 
       setAdmins(sortedAdmins);
       setStaff(staffList);
+      setGuards(guardList);
     } catch (error) {
       logError("Failed to load users:", error);
       setToast({
@@ -408,7 +412,7 @@ export default function AdminManagementPage() {
     const timer = setTimeout(async () => {
       try {
         // First, search local state
-        const allLocalUsers = [...admins, ...staff, ...users];
+        const allLocalUsers = [...admins, ...staff, ...guards, ...users];
         const localMatches = allLocalUsers.filter(
           (user) =>
             user.user_name?.toLowerCase().includes(trimmed.toLowerCase()) ||
@@ -443,7 +447,7 @@ export default function AdminManagementPage() {
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchQuery, admins, staff, users]);
+  }, [searchQuery, admins, staff, guards, users]);
 
   // Auto-dismiss toast after 3 seconds
   useEffect(() => {
@@ -473,6 +477,8 @@ export default function AdminManagementPage() {
       // Update local state
       if (userToRemove.user_type === "Admin") {
         setAdmins((prev) => prev.filter((u) => u.user_id !== userToRemove.user_id));
+      } else if (userToRemove.user_type === "Guard") {
+        setGuards((prev) => prev.filter((u) => u.user_id !== userToRemove.user_id));
       } else {
         setStaff((prev) => prev.filter((u) => u.user_id !== userToRemove.user_id));
       }
@@ -519,6 +525,8 @@ export default function AdminManagementPage() {
       // Remove from old list
       if (userToEdit.user_type === "Admin") {
         setAdmins((prev) => prev.filter((u) => u.user_id !== userToEdit.user_id));
+      } else if (userToEdit.user_type === "Guard") {
+        setGuards((prev) => prev.filter((u) => u.user_id !== userToEdit.user_id));
       } else if (userToEdit.user_type === "Staff") {
         setStaff((prev) => prev.filter((u) => u.user_id !== userToEdit.user_id));
       } else if (userToEdit.user_type === "User") {
@@ -529,6 +537,8 @@ export default function AdminManagementPage() {
       // Add to new list
       if (newRole === "Admin") {
         setAdmins((prev) => [...prev, updatedUser]);
+      } else if (newRole === "Guard") {
+        setGuards((prev) => [...prev, updatedUser]);
       } else if (newRole === "Staff") {
         setStaff((prev) => [...prev, updatedUser]);
       } else if (newRole === "User") {
@@ -599,7 +609,9 @@ export default function AdminManagementPage() {
 
     let successCount = 0;
     let failedCount = 0;
-    const selectedUsers = [...admins, ...staff].filter((u) => selectedUserIds.has(u.user_id));
+    const selectedUsers = [...admins, ...staff, ...guards].filter((u) =>
+      selectedUserIds.has(u.user_id)
+    );
 
     try {
       for (const user of selectedUsers) {
@@ -616,6 +628,7 @@ export default function AdminManagementPage() {
       // Update local state
       setAdmins((prev) => prev.filter((u) => !selectedUserIds.has(u.user_id)));
       setStaff((prev) => prev.filter((u) => !selectedUserIds.has(u.user_id)));
+      setGuards((prev) => prev.filter((u) => !selectedUserIds.has(u.user_id)));
       setSelectedUserIds(new Set());
 
       if (successCount > 0 && failedCount === 0) {
@@ -673,7 +686,7 @@ export default function AdminManagementPage() {
 
   // Export to CSV
   const handleExportCSV = useCallback(() => {
-    const allUsers = [...admins, ...staff, ...users];
+    const allUsers = [...admins, ...staff, ...guards, ...users];
     if (allUsers.length === 0) {
       setToast({
         show: true,
@@ -724,7 +737,7 @@ export default function AdminManagementPage() {
       message: `Exported ${allUsers.length} user${allUsers.length !== 1 ? "s" : ""}`,
       tone: "success",
     });
-  }, [admins, staff, users]);
+  }, [admins, staff, guards, users]);
 
   const selectedCount = selectedUserIds.size;
   const hasSelection = selectedCount > 0;
@@ -756,6 +769,7 @@ export default function AdminManagementPage() {
 
   const sortedAdmins = sortUsers(admins);
   const sortedStaff = sortUsers(staff);
+  const sortedGuards = sortUsers(guards);
   const sortedUsers = sortUsers(users);
 
   return (
@@ -935,6 +949,71 @@ export default function AdminManagementPage() {
                   isSelected={selectedUserIds.has(staffMember.user_id)}
                   onToggleSelect={handleToggleSelect}
                   isHighlighted={highlightedUserId === staffMember.user_id}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+          </Card>
+          )}
+
+          {/* Guard List */}
+          {(roleFilter === "All" || roleFilter === "Guard") && (
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-amber-500/10">
+                <Shield className="size-5 text-amber-700" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-slate-900">Guards</CardTitle>
+                <p className="text-sm text-slate-500">
+                  {isLoading ? "Loading..." : `${sortedGuards.length} guard${sortedGuards.length !== 1 ? "s" : ""}`}
+                </p>
+              </div>
+            </div>
+            {sortedGuards.length > 0 && !isLoading && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleSelectAll(sortedGuards)}
+                className="text-sm text-slate-600 hover:text-[#1D2981]"
+              >
+                {sortedGuards.filter((guardMember) => selectedUserIds.has(guardMember.user_id)).length === sortedGuards.length
+                  ? "Deselect All"
+                  : "Select All"}
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-3">
+              <UserCardSkeleton />
+              <UserCardSkeleton />
+            </div>
+          ) : sortedGuards.length === 0 ? (
+            <div className="grid place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-12">
+              <div className="text-center">
+                <Shield className="mx-auto mb-3 size-12 text-slate-300" />
+                <p className="text-sm font-medium text-slate-500">No guards found</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {sortedGuards.map((guardMember) => (
+                <UserCard
+                  key={guardMember.user_id}
+                  user={guardMember}
+                  isCurrentUser={guardMember.user_id === currentUser?.user_id}
+                  onRemove={handleRemoveClick}
+                  onEdit={handleEditClick}
+                  isRemoving={removingUserId === guardMember.user_id || isUpdatingRole}
+                  showCheckbox
+                  isSelected={selectedUserIds.has(guardMember.user_id)}
+                  onToggleSelect={handleToggleSelect}
+                  isHighlighted={highlightedUserId === guardMember.user_id}
                 />
               ))}
             </div>
@@ -1151,7 +1230,7 @@ export default function AdminManagementPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {(["All", "Admin", "Staff", "User"] as const).map((role) => (
+                {(["All", "Admin", "Staff", "Guard", "User"] as const).map((role) => (
                   <label
                     key={role}
                     className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
@@ -1242,7 +1321,7 @@ export default function AdminManagementPage() {
             <h3 className="mb-2 text-xl font-semibold text-slate-900">Remove {selectedCount} users?</h3>
             <p className="mb-6 text-sm text-slate-600">
               Are you sure you want to remove {selectedCount} user{selectedCount !== 1 ? "s" : ""} from their
-              Admin/Staff roles? They will be converted back to regular Users and can be re-added later.
+              Admin/Staff/Guard roles? They will be converted back to regular Users and can be re-added later.
             </p>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setShowBatchConfirm(false)} className="flex-1">

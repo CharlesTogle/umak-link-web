@@ -3,11 +3,14 @@
 import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getApiErrorMessage } from "@/lib/api-errors";
+import { PORTAL_LOGIN_REJECTION_MESSAGE, isPortalLoginAllowedUserType } from "@/lib/portal-auth";
 import { getRoleHomePathFromUserType } from "@/lib/role-routing";
 import { getRemainingLoginCooldownMs, registerLoginAttempt } from "@/lib/login-rate-limit";
 import { getSupabaseClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
 import { fetchCurrentUser, syncProfilePictureFromGoogle } from "@/services/auth-service";
+import { recordPortalLoginAudit } from "@/services/audit-logs-service";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
 
@@ -82,6 +85,7 @@ export default function GoogleLoginButton() {
 
     setStatus("loading");
     setError(null);
+    let hasEstablishedSupabaseSession = false;
 
     try {
       const payload = decodeGoogleCredentialPayload(credential);
@@ -102,6 +106,8 @@ export default function GoogleLoginButton() {
         throw signInError;
       }
 
+      hasEstablishedSupabaseSession = true;
+
       try {
         await syncProfilePictureFromGoogle(credential);
       } catch {
@@ -109,27 +115,37 @@ export default function GoogleLoginButton() {
       }
 
       const currentUser = await fetchCurrentUser();
-      const nextPath = getRoleHomePathFromUserType(currentUser?.user_type);
 
-      if (!currentUser || !nextPath) {
+      if (!currentUser || !isPortalLoginAllowedUserType(currentUser.user_type)) {
         setStatus("error");
-        setError("Unauthorized account.");
+        setError(PORTAL_LOGIN_REJECTION_MESSAGE);
         clearSession();
         return;
       }
 
-      if (currentUser.user_type === "User") {
+      const nextPath = getRoleHomePathFromUserType(currentUser.user_type);
+
+      if (!nextPath) {
+        setStatus("error");
+        setError(PORTAL_LOGIN_REJECTION_MESSAGE);
         clearSession();
-        setStatus("success");
-        router.replace(nextPath);
         return;
       }
+
+      await recordPortalLoginAudit(currentUser);
 
       setAuthenticatedUser(currentUser);
       setStatus("success");
       router.replace(nextPath);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed.";
+      if (hasEstablishedSupabaseSession) {
+        clearSession();
+      }
+
+      const message = getApiErrorMessage(err, {
+        context: "auth",
+        fallback: "Unable to complete sign in. Please try again.",
+      });
       setStatus("error");
       setError(message);
     }

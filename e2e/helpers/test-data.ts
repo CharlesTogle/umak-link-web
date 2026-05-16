@@ -20,6 +20,14 @@ export const testUsers = {
     user_type: 'Staff' as const,
     notification_token: null,
   },
+  guard: {
+    user_id: 'guard-001',
+    user_name: 'Guard User',
+    email: 'guard@umak.edu.ph',
+    profile_picture_url: null,
+    user_type: 'Guard' as const,
+    notification_token: null,
+  },
   user: {
     user_id: 'user-001',
     user_name: 'Regular User',

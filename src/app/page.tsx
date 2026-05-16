@@ -9,7 +9,7 @@ const modules = [
   { title: "Post Moderation", icon: ClipboardCheck },
   { title: "Fraud Reports", icon: ShieldCheck },
   { title: "Role Management", icon: UserCog },
-  { title: "Announcements", icon: BellRing },
+  { title: "Alerts", icon: BellRing },
 ];
 
 export default function Home() {
@@ -38,7 +38,7 @@ export default function Home() {
                 Admin and Staff Portal
               </CardTitle>
               <p className="mx-auto max-w-2xl text-sm text-slate-700 md:text-base">
-                A web control center for staff operations, approvals, fraud handling, and campus-wide
+                A web control center for approvals, fraud handling, role management, and campus-wide
                 notifications.
               </p>
               <div className="flex flex-wrap justify-center gap-3 pt-2">

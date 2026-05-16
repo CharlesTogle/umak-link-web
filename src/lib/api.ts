@@ -1,5 +1,6 @@
 import axios from "axios";
 import { supabase } from "@/lib/supabase";
+import { attachFriendlyApiErrorMessage } from "@/lib/api-errors";
 
 function resolveApiBaseUrl(): string {
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
@@ -33,10 +34,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.code === "ECONNABORTED" && error.message?.includes("timeout")) {
-      error.message =
-        "Request timed out. Please check your internet connection and try again.";
-    }
+    attachFriendlyApiErrorMessage(error, "action");
     return Promise.reject(error);
   }
 );

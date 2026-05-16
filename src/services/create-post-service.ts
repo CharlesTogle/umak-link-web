@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios";
 import { api } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api-errors";
 import { extractPhilippineDateTimeParts } from "@/lib/date-time-helpers";
 import { computeBlockHash64 } from "@/lib/hash-utils";
 import { makeDisplay } from "@/lib/image-utils";
@@ -58,20 +59,7 @@ export interface CreateStaffPostInput {
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
-  if (isAxiosError(error)) {
-    const responseMessage =
-      typeof error.response?.data === "object" &&
-      error.response?.data &&
-      "message" in error.response.data &&
-      typeof error.response.data.message === "string"
-        ? error.response.data.message
-        : null;
-    if (responseMessage) return responseMessage;
-    if (error.message) return error.message;
-  }
-
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
+  return getApiErrorMessage(error, { context: "action", fallback });
 }
 
 async function uploadDisplayImage(image: File, userId: string): Promise<string> {

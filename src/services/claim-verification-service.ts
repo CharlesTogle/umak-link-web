@@ -1,5 +1,5 @@
-import { isAxiosError } from "axios";
 import { api } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api-errors";
 import type {
   CancelClaimVerificationSessionResponse,
   ClaimVerificationSessionStatusResponse,
@@ -11,21 +11,7 @@ import type {
 } from "@/types/claim-verification";
 
 function getClaimVerificationErrorMessage(error: unknown, fallback: string): string {
-  if (isAxiosError(error)) {
-    const responseMessage =
-      typeof error.response?.data === "object" &&
-      error.response?.data &&
-      "message" in error.response.data &&
-      typeof error.response.data.message === "string"
-        ? error.response.data.message
-        : null;
-
-    if (responseMessage) return responseMessage;
-    if (error.message) return error.message;
-  }
-
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
+  return getApiErrorMessage(error, { context: "action", fallback });
 }
 
 export async function createClaimVerificationSession(

@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios";
 import { api } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api-errors";
 import type { AuthMeResponse, AuthUser } from "@/types/auth";
 
 export async function fetchCurrentUser(): Promise<AuthUser> {
@@ -20,19 +21,8 @@ export function isUnauthorizedError(error: unknown): boolean {
 }
 
 export function getAuthErrorMessage(error: unknown): string {
-  if (isAxiosError(error)) {
-    const responseMessage =
-      typeof error.response?.data === "object" &&
-      error.response?.data &&
-      "message" in error.response.data &&
-      typeof error.response.data.message === "string"
-        ? error.response.data.message
-        : null;
-
-    if (responseMessage) return responseMessage;
-    if (typeof error.message === "string" && error.message.trim()) return error.message;
-  }
-
-  if (error instanceof Error && error.message.trim()) return error.message;
-  return "Unable to load your account details.";
+  return getApiErrorMessage(error, {
+    context: "auth",
+    fallback: "Unable to load your account details.",
+  });
 }

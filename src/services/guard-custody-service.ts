@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios";
 import { api } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api-errors";
 import type {
   GuardDecisionRequest,
   GuardDecisionResponse,
@@ -23,16 +24,11 @@ function mapGuardCustodyError(error: unknown): GuardCustodyError {
   }
 
   if (isAxiosError(error)) {
-    const responseMessage =
-      typeof error.response?.data === "object" &&
-      error.response?.data &&
-      "message" in error.response.data &&
-      typeof error.response.data.message === "string"
-        ? error.response.data.message
-        : null;
-
     return new GuardCustodyError(
-      responseMessage ?? error.message ?? "Guard custody request failed.",
+      getApiErrorMessage(error, {
+        context: "action",
+        fallback: "Guard custody request failed.",
+      }),
       error.response?.status ?? 0
     );
   }

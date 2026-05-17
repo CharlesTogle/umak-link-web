@@ -16,6 +16,10 @@ export async function syncProfilePictureFromGoogle(googleIdToken: string): Promi
   return response.data.user ?? null;
 }
 
+export async function recordPortalLoginAudit(): Promise<void> {
+  await api.post("/auth/portal-login-audit");
+}
+
 export function isUnauthorizedError(error: unknown): boolean {
   return isAxiosError(error) && error.response?.status === 401;
 }

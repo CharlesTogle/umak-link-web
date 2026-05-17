@@ -9,8 +9,11 @@ import { getRoleHomePathFromUserType } from "@/lib/role-routing";
 import { getRemainingLoginCooldownMs, registerLoginAttempt } from "@/lib/login-rate-limit";
 import { getSupabaseClient } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
-import { fetchCurrentUser, syncProfilePictureFromGoogle } from "@/services/auth-service";
-import { recordPortalLoginAudit } from "@/services/audit-logs-service";
+import {
+  fetchCurrentUser,
+  recordPortalLoginAudit,
+  syncProfilePictureFromGoogle,
+} from "@/services/auth-service";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
 
@@ -132,10 +135,9 @@ export default function GoogleLoginButton() {
         return;
       }
 
-      await recordPortalLoginAudit(currentUser);
-
       setAuthenticatedUser(currentUser);
       setStatus("success");
+      void recordPortalLoginAudit().catch(() => undefined);
       router.replace(nextPath);
     } catch (err) {
       if (hasEstablishedSupabaseSession) {

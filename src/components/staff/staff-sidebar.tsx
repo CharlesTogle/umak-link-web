@@ -53,8 +53,8 @@ export function StaffSidebar() {
   const infoActive = isActive(pathname, "/staff/info");
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    Dashboard: true,
-    "Post Records": true,
+    "/staff": true,
+    "/staff/post-records": true,
   });
   const unreadCountQuery = useUnreadNotificationsCount(user?.user_id ?? null);
   const unreadCount = unreadCountQuery.data?.unread_count ?? 0;
@@ -63,7 +63,7 @@ export function StaffSidebar() {
   const defaultGroupState = useMemo(
     () =>
       staffPrimaryRoutes.reduce<Record<string, boolean>>((acc, route) => {
-        if (route.children?.length && openGroups[route.label] === undefined) acc[route.label] = false;
+        if (route.children?.length && openGroups[route.href] === undefined) acc[route.href] = false;
         return acc;
       }, {}),
     [openGroups]
@@ -88,6 +88,7 @@ export function StaffSidebar() {
         <nav className="space-y-2 overflow-auto pr-1">
           {staffPrimaryRoutes.map((route) => {
             const active = isActive(pathname, route.href);
+            const isGroupOpen = mergedOpenState[route.href];
             return (
               <div key={route.href} className="space-y-1">
                 <div className="mr-2 flex items-center justify-between">
@@ -106,19 +107,19 @@ export function StaffSidebar() {
                       onClick={() =>
                         setOpenGroups((prev) => ({
                           ...prev,
-                          [route.label]: !mergedOpenState[route.label],
+                          [route.href]: !isGroupOpen,
                         }))
                       }
                       className="ml-1 rounded-md p-1 text-slate-500 hover:bg-slate-100"
                     >
                       <ChevronDown
-                        className={`size-4 transition-transform ${mergedOpenState[route.label] ? "rotate-180" : ""}`}
+                        className={`size-4 transition-transform ${isGroupOpen ? "rotate-180" : ""}`}
                       />
                     </button>
                   ) : null}
                 </div>
 
-                {route.children?.length && mergedOpenState[route.label] ? (
+                {route.children?.length && isGroupOpen ? (
                   <div className="ml-5 space-y-1 border-l border-slate-200 pl-3">
                     {route.children.map((child) => {
                       const childActive = isChildActive(pathname, searchParams, child.href);

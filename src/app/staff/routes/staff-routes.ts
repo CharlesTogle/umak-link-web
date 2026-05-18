@@ -25,7 +25,7 @@ export interface StaffRouteGroup extends StaffRouteItem {
 
 export const staffPrimaryRoutes: StaffRouteGroup[] = [
   {
-    label: "Dashboard",
+    label: "Overview",
     href: "/staff",
     icon: House,
     children: [

@@ -78,7 +78,7 @@ export function StaffSidebar() {
   };
 
   return (
-    <aside className="m-4 flex h-[calc(100vh-2rem)] w-80 shrink-0">
+    <aside className="m-4 flex h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-80 shrink-0 lg:w-80">
       <div className="flex w-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="text-sm font-semibold tracking-[0.03em] text-slate-500" aria-label="UMak-LINK">
           UM<span className="lowercase">ak</span>-LINK
@@ -221,6 +221,7 @@ export function StaffSidebar() {
           <button
             type="button"
             onClick={handleLogout}
+            data-sidebar-close
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
             <LogOut className="size-4" />

@@ -13,8 +13,8 @@ export function chipClass(isActive: boolean): string {
 
 export function SearchResultsPanel(props: {
   autoSearchFromUrl: boolean;
-  query: string;
   submittedQuery: string;
+  submittedDisplayQuery: string;
   isOffline: boolean;
   errorMessage: string | null;
   isLoading: boolean;
@@ -23,15 +23,16 @@ export function SearchResultsPanel(props: {
   onRetry: () => void;
   onAction: (action: PostRecordAction, record: PostRecord) => void;
 }) {
+  const hasSubmittedSearch =
+    props.autoSearchFromUrl && Boolean(props.submittedQuery.trim());
   const showReadyState =
-    (!props.autoSearchFromUrl || !props.query.trim()) &&
+    !hasSubmittedSearch &&
     !props.isLoading &&
     !props.errorMessage &&
     !props.isOffline &&
     props.results.length === 0;
   const showEmptyResults =
-    props.autoSearchFromUrl &&
-    Boolean(props.submittedQuery.trim()) &&
+    hasSubmittedSearch &&
     !props.isLoading &&
     !props.errorMessage &&
     !props.isOffline &&
@@ -43,9 +44,9 @@ export function SearchResultsPanel(props: {
         <div>
           <h1 className="text-3xl font-bold text-[#1D2981]">Search</h1>
           <p className="mt-1 text-sm text-slate-600">Find post records using keyword + advanced filters.</p>
-          {props.autoSearchFromUrl && props.query ? (
+          {props.autoSearchFromUrl && props.submittedDisplayQuery ? (
             <p className="mt-2 text-sm text-slate-600">
-              Showing results for <span className="font-semibold text-slate-800">&quot;{props.query}&quot;</span>
+              Showing results for <span className="font-semibold text-slate-800">&quot;{props.submittedDisplayQuery}&quot;</span>
             </p>
           ) : null}
         </div>

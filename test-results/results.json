@@ -11,7 +11,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 2
+      "actualWorkers": 4
     },
     "preserveOutput": "always",
     "projects": [
@@ -20,7 +20,7 @@
         "repeatEach": 1,
         "retries": 1,
         "metadata": {
-          "actualWorkers": 2
+          "actualWorkers": 4
         },
         "id": "chromium",
         "name": "chromium",
@@ -68,20 +68,20 @@
   },
   "suites": [
     {
-      "title": "staff/claim-flow.spec.ts",
-      "file": "staff/claim-flow.spec.ts",
+      "title": "admin/audit-logs.spec.ts",
+      "file": "admin/audit-logs.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Staff Claim Flow",
-          "file": "staff/claim-flow.spec.ts",
-          "line": 6,
+          "title": "Admin Audit Logs",
+          "file": "admin/audit-logs.spec.ts",
+          "line": 5,
           "column": 6,
           "specs": [
             {
-              "title": "successful staff claim does not flash the blocked claim screen before redirect",
+              "title": "audit logs list page loads",
               "ok": true,
               "tags": [],
               "tests": [
@@ -96,12 +96,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 5387,
+                      "duration": 14579,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-16T17:16:14.612Z",
+                      "startTime": "2026-05-18T02:15:32.704Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -109,13 +109,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "21c3e212e42b5850fe46-ec8925b6b2a183ba57ab",
-              "file": "staff/claim-flow.spec.ts",
-              "line": 7,
+              "id": "93e02e20519550dbc13a-ab764ace5e3f25de2b63",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 6,
               "column": 7
             },
             {
-              "title": "blocked staff claim route redirects to the post record without flashing the blocked claim screen",
+              "title": "audit logs displays log entries",
               "ok": true,
               "tags": [],
               "tests": [
@@ -130,12 +130,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 3335,
+                      "duration": 11555,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-16T17:16:14.654Z",
+                      "startTime": "2026-05-18T02:15:32.750Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -143,9 +143,349 @@
                   "status": "expected"
                 }
               ],
-              "id": "21c3e212e42b5850fe46-57b8ddd2b4bcd63acd16",
-              "file": "staff/claim-flow.spec.ts",
-              "line": 261,
+              "id": "93e02e20519550dbc13a-936df7fd6da2811f6195",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 28,
+              "column": 7
+            },
+            {
+              "title": "audit logs can be filtered by action",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 14579,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:32.806Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-c31648cfce4204491eb6",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 50,
+              "column": 7
+            },
+            {
+              "title": "audit logs can be filtered by user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 14593,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:32.870Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-e3af4ec851d75463c246",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 72,
+              "column": 7
+            },
+            {
+              "title": "audit logs can be filtered by date range",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3330,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:45.049Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-808f6f6f17baf4800100",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 93,
+              "column": 7
+            },
+            {
+              "title": "audit logs shows pagination",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 4401,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:48.069Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-9f8c05c85acc87419b30",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 114,
+              "column": 7
+            },
+            {
+              "title": "audit logs displays details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3652,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:48.086Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-e5758ee4bce7d6cebedd",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 138,
+              "column": 7
+            },
+            {
+              "title": "audit logs can be expanded for more details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 4411,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:48.090Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-5ca3ec91d8c3abd8092c",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 162,
+              "column": 7
+            },
+            {
+              "title": "audit logs render Philippine time and expanded notification and custody details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 5217,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:48.407Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-04a06d3b59b8d3c087f0",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 185,
+              "column": 7
+            },
+            {
+              "title": "audit logs empty state",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2888,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:51.806Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-f9bee3aded2e9aad4b34",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 334,
+              "column": 7
+            },
+            {
+              "title": "staff user cannot access admin audit logs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2480,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:52.512Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-747c7ec1fb1c4fadceaf",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 354,
+              "column": 7
+            },
+            {
+              "title": "audit logs api 403 redirects to not allowed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2508,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-18T02:15:52.568Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "93e02e20519550dbc13a-f15e56c6e2d1677426ee",
+              "file": "admin/audit-logs.spec.ts",
+              "line": 367,
               "column": 7
             }
           ]
@@ -155,9 +495,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-05-16T17:16:13.481Z",
-    "duration": 6635.254,
-    "expected": 2,
+    "startTime": "2026-05-18T02:15:17.293Z",
+    "duration": 37934.681,
+    "expected": 12,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

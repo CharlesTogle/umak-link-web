@@ -26,6 +26,8 @@ interface StaffSearchViewProps {
   autoSearchFromUrl?: boolean;
 }
 
+const IMAGE_SEARCH_LABEL = "Image search";
+
 const itemStatusOptions: Array<{ label: string; value: SearchItemStatus }> = [
   { label: "Lost", value: "lost" },
   { label: "Unclaimed", value: "unclaimed" },
@@ -67,7 +69,10 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   const urlQuery = (searchParams.get("q") ?? "").trim();
-  const submittedQuery = autoSearchFromUrl ? urlQuery : "";
+  const urlSearchQuery = (searchParams.get("sq") ?? "").trim();
+  const urlLabel = (searchParams.get("label") ?? "").trim();
+  const submittedQuery = autoSearchFromUrl ? urlSearchQuery || urlQuery : "";
+  const submittedDisplayQuery = autoSearchFromUrl ? urlQuery || urlLabel : "";
 
   const searchQuery = useStaffSearchResults(
     submittedQuery,
@@ -151,8 +156,23 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
       return;
     }
 
-    setRecentSearches(addStaffSearchHistoryEntry(effectiveQuery));
-    const nextPath = `/staff/search/results?q=${encodeURIComponent(effectiveQuery)}`;
+    if (trimmed) {
+      setRecentSearches(addStaffSearchHistoryEntry(trimmed));
+    }
+
+    const nextSearchParams = new URLSearchParams();
+    if (trimmed) {
+      nextSearchParams.set("q", trimmed);
+    }
+    if (effectiveQuery !== trimmed) {
+      nextSearchParams.set("sq", effectiveQuery);
+      if (!trimmed) {
+        nextSearchParams.set("label", IMAGE_SEARCH_LABEL);
+      }
+    }
+
+    const nextQueryString = nextSearchParams.toString();
+    const nextPath = `/staff/search/results${nextQueryString ? `?${nextQueryString}` : ""}`;
     router.push(nextPath);
   };
 
@@ -260,8 +280,8 @@ export function StaffSearchView({ autoSearchFromUrl = false }: StaffSearchViewPr
     <section className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-12">
       <SearchResultsPanel
         autoSearchFromUrl={autoSearchFromUrl}
-        query={query}
         submittedQuery={submittedQuery}
+        submittedDisplayQuery={submittedDisplayQuery}
         isOffline={isOffline}
         errorMessage={errorMessage}
         isLoading={searchQuery.isLoading}

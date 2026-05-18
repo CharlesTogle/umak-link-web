@@ -97,6 +97,89 @@ test.describe('Staff Search', () => {
     }
   });
 
+  test('reverse image search keeps AI query out of the visible search text', async ({
+    page,
+    staffUser,
+    setAuthToken,
+  }) => {
+    await setAuthToken(staffUser);
+
+    let submittedSearchQuery = '';
+
+    await page.route('**/search/image-query', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          search_query: 'pedestal fan AND silver AND metal AND round base',
+        }),
+      });
+    });
+
+    await page.route('**/search/items/staff', async (route) => {
+      submittedSearchQuery = route.request().postData() ?? '';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [{ post_id: '101', post_status: 'accepted' }],
+        }),
+      });
+    });
+
+    await page.route('**/posts**', async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          posts: [
+            createMockPost({
+              post_id: 101,
+              item_name: 'Pedestal Fan',
+              post_status: 'accepted',
+              item_status: 'unclaimed',
+            }),
+          ],
+          count: 1,
+        }),
+      });
+    });
+
+    await page.goto(APP_ROUTES.staff.search);
+
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'fan.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('fake image data'),
+    });
+
+    await page.getByRole('button', { name: 'Search records' }).click();
+
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('label'))
+      .toBe('Image search');
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('sq'))
+      .toBe('pedestal fan AND silver AND metal AND round base');
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('q'))
+      .toBe(null);
+
+    const searchSummary = page.locator('p', { hasText: 'Showing results for' });
+    await expect(searchSummary).toContainText('"Image search"');
+    await expect(searchSummary).not.toContainText('AND');
+    await expect(page.locator('#staff-search-keyword')).toHaveValue('');
+    expect(submittedSearchQuery).toContain(
+      '"query":"pedestal fan AND silver AND metal AND round base"'
+    );
+  });
+
   test('search has filters', async ({
     page,
     staffUser,

@@ -57,6 +57,23 @@ test.describe('Authentication & Session Management', () => {
     expect(role).toBe('User');
   });
 
+  test('guard user is redirected to /not-allowed and session is cleared', async ({
+    page,
+    guardUser,
+    setAuthToken,
+  }) => {
+    await setAuthToken(guardUser);
+    await page.goto(APP_ROUTES.home);
+    await page.waitForURL(`**${APP_ROUTES.notAllowed}`, { timeout: 10000 });
+
+    const token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
+    const role = await page.evaluate(() => localStorage.getItem('umak_link_web_role'));
+
+    expect(page.url()).toContain(APP_ROUTES.notAllowed);
+    expect(token).toBeNull();
+    expect(role).toBeNull();
+  });
+
   test('logout clears authentication tokens', async ({
     page,
     adminUser,

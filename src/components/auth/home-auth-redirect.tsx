@@ -8,15 +8,22 @@ import { getRoleHomePath } from "@/lib/role-routing";
 
 export function HomeAuthRedirect() {
   const router = useRouter();
-  const { user, isLoading } = useCurrentUser();
+  const { user, isLoading, rejectedUserType } = useCurrentUser();
 
   useEffect(() => {
-    if (isLoading || !user) return;
+    if (isLoading) return;
+
+    if (!user) {
+      if (rejectedUserType === "Guard") {
+        router.replace("/not-allowed");
+      }
+      return;
+    }
 
     router.replace(getRoleHomePath(user.user_type));
-  }, [isLoading, router, user]);
+  }, [isLoading, rejectedUserType, router, user]);
 
-  if (!isLoading && !user) {
+  if (!isLoading && !user && rejectedUserType !== "Guard") {
     return null;
   }
 

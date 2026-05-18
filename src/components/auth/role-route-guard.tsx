@@ -14,20 +14,20 @@ interface RoleRouteGuardProps {
 
 export function RoleRouteGuard({ allowedRoles, children }: RoleRouteGuardProps) {
   const router = useRouter();
-  const { user, isLoading } = useCurrentUser();
+  const { user, isLoading, rejectedUserType } = useCurrentUser();
 
   useEffect(() => {
     if (isLoading) return;
 
     if (!user) {
-      router.replace("/");
+      router.replace(rejectedUserType === "Guard" ? "/not-allowed" : "/");
       return;
     }
 
     if (!allowedRoles.includes(user.user_type)) {
       router.replace("/not-allowed");
     }
-  }, [allowedRoles, isLoading, router, user]);
+  }, [allowedRoles, isLoading, rejectedUserType, router, user]);
 
   if (isLoading) {
     return (

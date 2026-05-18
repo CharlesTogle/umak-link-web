@@ -8,6 +8,7 @@ export function useCurrentUser() {
   const status = useAuthStore((state) => state.status);
   const error = useAuthStore((state) => state.error);
   const hasFetched = useAuthStore((state) => state.hasFetched);
+  const rejectedUserType = useAuthStore((state) => state.rejectedUserType);
   const hydrateUser = useAuthStore((state) => state.hydrateUser);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export function useCurrentUser() {
     user,
     status,
     error,
+    rejectedUserType,
     isLoading: status === "loading" || (status === "idle" && !hasFetched),
   };
 }

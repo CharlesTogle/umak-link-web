@@ -167,9 +167,9 @@ test.describe('Navigation - Global', () => {
     // Admin tries to navigate to staff route
     await page.goto(APP_ROUTES.staff.dashboard);
 
-    // RoleRouteGuard redirects Admin → /admin when trying /staff
-    await page.waitForURL('**/admin**', { timeout: 10000 });
-    expect(page.url()).not.toContain('/staff');
+    // RoleRouteGuard redirects authenticated users without access to /not-allowed.
+    await page.waitForURL(`**${APP_ROUTES.notAllowed}`, { timeout: 10000 });
+    expect(page.url()).toContain(APP_ROUTES.notAllowed);
   });
 
   test('clicking internal links does not break navigation', async ({

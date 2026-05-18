@@ -168,7 +168,7 @@ test.describe('Admin Announcements', () => {
     expect(hasEmpty).toBeTruthy();
   });
 
-  test('staff user cannot access admin announcements', async ({
+  test('staff user is redirected to /not-allowed from admin announcements', async ({
     page,
     staffUser,
     setAuthToken,
@@ -176,9 +176,9 @@ test.describe('Admin Announcements', () => {
     await setAuthToken(staffUser);
     await page.goto(APP_ROUTES.admin.announcements);
 
-    // RoleRouteGuard redirects Staff → /staff
-    await page.waitForURL('**/staff**', { timeout: 10000 });
-    expect(page.url()).not.toContain('/admin');
+    // RoleRouteGuard redirects authenticated users without access to /not-allowed.
+    await page.waitForURL(`**${APP_ROUTES.notAllowed}`, { timeout: 10000 });
+    expect(page.url()).toContain(APP_ROUTES.notAllowed);
   });
 
   test('announcement form validates required fields', async ({

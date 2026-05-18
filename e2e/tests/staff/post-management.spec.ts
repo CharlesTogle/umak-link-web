@@ -221,7 +221,7 @@ test.describe('Staff Post Management', () => {
       return url.searchParams.get('item_status') === 'claimed';
     });
 
-    await page.getByRole('link', { name: 'Claimed' }).click();
+    await page.getByRole('link', { name: 'Claimed', exact: true }).click();
 
     const claimedRequest = await claimedRequestPromise;
     const claimedUrl = new URL(claimedRequest.url());

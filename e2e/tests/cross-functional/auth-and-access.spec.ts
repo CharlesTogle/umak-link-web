@@ -17,7 +17,7 @@ test.describe('Role-Based Access Control', () => {
     expect(page.url()).toContain('/admin');
   });
 
-  test('staff user is redirected away from /admin/dashboard', async ({
+  test('staff user is redirected to /not-allowed from /admin/dashboard', async ({
     page,
     staffUser,
     setAuthToken,
@@ -25,9 +25,9 @@ test.describe('Role-Based Access Control', () => {
     await setAuthToken(staffUser);
     await page.goto(APP_ROUTES.admin.dashboard);
 
-    // RoleRouteGuard redirects staff → /staff after /auth/me resolves
-    await page.waitForURL('**/staff**', { timeout: 10000 });
-    expect(page.url()).toContain('/staff');
+    // RoleRouteGuard redirects authenticated users without access to /not-allowed.
+    await page.waitForURL(`**${APP_ROUTES.notAllowed}`, { timeout: 10000 });
+    expect(page.url()).toContain(APP_ROUTES.notAllowed);
   });
 
   test('regular user is redirected away from admin routes', async ({
@@ -56,7 +56,7 @@ test.describe('Role-Based Access Control', () => {
     expect(page.url()).toContain('/staff');
   });
 
-  test('admin user is redirected away from /staff routes', async ({
+  test('admin user is redirected to /not-allowed from /staff routes', async ({
     page,
     adminUser,
     setAuthToken,
@@ -64,9 +64,9 @@ test.describe('Role-Based Access Control', () => {
     await setAuthToken(adminUser);
     await page.goto(APP_ROUTES.staff.dashboard);
 
-    // RoleRouteGuard redirects Admin → /admin
-    await page.waitForURL('**/admin**', { timeout: 10000 });
-    expect(page.url()).toContain('/admin');
+    // RoleRouteGuard redirects authenticated users without access to /not-allowed.
+    await page.waitForURL(`**${APP_ROUTES.notAllowed}`, { timeout: 10000 });
+    expect(page.url()).toContain(APP_ROUTES.notAllowed);
   });
 
   test('regular user cannot access /staff routes', async ({

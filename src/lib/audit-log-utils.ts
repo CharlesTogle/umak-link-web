@@ -20,6 +20,19 @@ function getAuditLogChanges(log: AuditLog): Record<string, unknown> {
   return log.changes && typeof log.changes === "object" ? log.changes : {};
 }
 
+function getAuditLogStringValue(log: AuditLog, key: string): string | null {
+  const value = getAuditLogChanges(log)[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function getFraudReportAuditLabel(log: AuditLog): string | null {
+  return (
+    getAuditLogStringValue(log, "report_title") ??
+    getAuditLogStringValue(log, "item_name") ??
+    getAuditLogStringValue(log, "report_id")
+  );
+}
+
 export function getAuditLogTimestampValue(log: AuditLog): string | null {
   if (typeof log.timestamp_local === "string" && log.timestamp_local.trim().length > 0) {
     return log.timestamp_local;
@@ -41,6 +54,15 @@ function getPhilippineDayEndMillis(value: string): number {
 }
 
 export function getAuditLogMessage(log: AuditLog): string {
+  if (log.action === "fraud_report_marked_open") {
+    const userName = log.user_table?.user_name ?? "Staff";
+    const reportLabel = getFraudReportAuditLabel(log);
+
+    if (reportLabel) {
+      return `${userName} opened fraud report ${reportLabel}`;
+    }
+  }
+
   const message = getAuditLogChanges(log).message;
   return typeof message === "string" && message.trim().length > 0
     ? message

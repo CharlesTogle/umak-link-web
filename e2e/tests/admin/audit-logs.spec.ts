@@ -363,4 +363,30 @@ test.describe('Admin Audit Logs', () => {
     await page.waitForURL('**/not-allowed', { timeout: 10000 });
     expect(page.url()).not.toContain('/admin');
   });
+
+  test('audit logs api 403 redirects to not allowed', async ({
+    page,
+    adminUser,
+    setAuthToken,
+  }) => {
+    await setAuthToken(adminUser);
+
+    await page.route('**/audit-logs**', (route) => {
+      route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          statusCode: 403,
+          error: 'Forbidden',
+          code: 'FORBIDDEN',
+          message: 'Admin access required',
+        }),
+      });
+    });
+
+    await page.goto(APP_ROUTES.admin.auditLogs);
+
+    await page.waitForURL('**/not-allowed', { timeout: 10000 });
+    expect(page.url()).toContain('/not-allowed');
+  });
 });

@@ -239,3 +239,8 @@ export function isApiNotFoundError(error: unknown): boolean {
   const metadata = extractApiErrorMetadata(error);
   return metadata.statusCode === 404 || metadata.code === "NOT_FOUND";
 }
+
+export function isApiForbiddenError(error: unknown): boolean {
+  const metadata = extractApiErrorMetadata(error);
+  return metadata.statusCode === 403 || metadata.code === "FORBIDDEN";
+}

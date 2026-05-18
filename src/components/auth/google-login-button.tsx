@@ -3,8 +3,8 @@
 import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getApiErrorMessage } from "@/lib/api-errors";
-import { PORTAL_LOGIN_REJECTION_MESSAGE, isPortalLoginAllowedUserType } from "@/lib/portal-auth";
+import { getApiErrorMessage, isApiForbiddenError } from "@/lib/api-errors";
+import { isPortalLoginAllowedUserType } from "@/lib/portal-auth";
 import { getRoleHomePathFromUserType } from "@/lib/role-routing";
 import { getRemainingLoginCooldownMs, registerLoginAttempt } from "@/lib/login-rate-limit";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -120,18 +120,16 @@ export default function GoogleLoginButton() {
       const currentUser = await fetchCurrentUser();
 
       if (!currentUser || !isPortalLoginAllowedUserType(currentUser.user_type)) {
-        setStatus("error");
-        setError(PORTAL_LOGIN_REJECTION_MESSAGE);
         clearSession();
+        router.replace("/not-allowed");
         return;
       }
 
       const nextPath = getRoleHomePathFromUserType(currentUser.user_type);
 
       if (!nextPath) {
-        setStatus("error");
-        setError(PORTAL_LOGIN_REJECTION_MESSAGE);
         clearSession();
+        router.replace("/not-allowed");
         return;
       }
 
@@ -142,6 +140,13 @@ export default function GoogleLoginButton() {
     } catch (err) {
       if (hasEstablishedSupabaseSession) {
         clearSession();
+      }
+
+      if (isApiForbiddenError(err)) {
+        setStatus("idle");
+        setError(null);
+        router.replace("/not-allowed");
+        return;
       }
 
       const message = getApiErrorMessage(err, {

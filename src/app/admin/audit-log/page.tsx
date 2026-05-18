@@ -9,6 +9,7 @@ import { CustomToast, type CustomToastTone } from "@/components/ui/custom-toast"
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { isApiForbiddenError } from "@/lib/api-errors";
 import { logError } from "@/lib/error-utils";
 import { formatDateTimeInPhilippineTime } from "@/lib/date-time-helpers";
 import { fetchAllAuditLogs, fetchAuditLogs, type AuditLog } from "@/services/audit-logs-service";
@@ -58,6 +59,10 @@ export default function AdminAuditLogPage() {
       setToast(null);
     }, 3000);
   }, []);
+
+  const redirectToNotAllowed = useCallback(() => {
+    router.replace("/not-allowed");
+  }, [router]);
 
   // Initialize state from URL on mount
   useEffect(() => {
@@ -136,12 +141,17 @@ export default function AdminAuditLogPage() {
 
       setHasMore(logs.length === LOGS_LIMIT);
     } catch (error) {
+      if (isApiForbiddenError(error)) {
+        redirectToNotAllowed();
+        return;
+      }
+
       logError("Failed to fetch audit logs:", error);
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [redirectToNotAllowed]);
 
   // Load initial logs
   useEffect(() => {
@@ -178,6 +188,11 @@ export default function AdminAuditLogPage() {
         "success"
       );
     } catch (error) {
+      if (isApiForbiddenError(error)) {
+        redirectToNotAllowed();
+        return;
+      }
+
       logError("Failed to export audit logs:", error);
       showToast("Failed to export the audit trail. Please try again.", "danger");
     } finally {

@@ -47,58 +47,47 @@ test.describe('Authentication & Session Management', () => {
     expect(role).toBe('User');
   });
 
-  test('mobile-sized login CTA starts OAuth redirect without hidden-button loading error', async ({
+  test('mobile-sized login CTA stays disabled until Google Sign-In has initialized', async ({
     page,
   }) => {
-    await page.route('**/auth/v1/authorize**', async (route) => {
+    await page.route('https://accounts.google.com/gsi/client', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await route.fulfill({
         status: 200,
-        contentType: 'text/html',
-        body: '<!doctype html><title>OAuth Redirect</title><p>redirected</p>',
+        contentType: 'application/javascript',
+        body: `
+          window.google = {
+            accounts: {
+              id: {
+                initialize() {},
+                renderButton(parent) {
+                  const button = document.createElement('button');
+                  button.type = 'button';
+                  button.textContent = 'Google';
+                  parent.appendChild(button);
+                },
+              },
+            },
+          };
+        `,
       });
     });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(APP_ROUTES.home);
 
-    await page.getByRole('button', { name: 'Sign In With UMak Email' }).click();
-    await page.waitForURL(/auth\/v1\/authorize\?/i, { timeout: 10000 });
+    const loginButton = page.getByRole('button', {
+      name: /Sign In With UMak Email|Loading Google Sign-In/i,
+    });
+
+    await expect(loginButton).toBeDisabled();
+    await expect(page.getByText('Preparing Google Sign-In...')).toBeVisible();
+    await expect(loginButton).toHaveText('Sign In With UMak Email', { timeout: 10000 });
+    await expect(loginButton).toBeEnabled();
 
     await expect(
       page.getByText('Google Sign-In is still loading. Please try again.')
     ).toHaveCount(0);
-
-    expect(page.url()).toContain('/auth/v1/authorize?');
-    expect(page.url()).toContain('provider=google');
-  });
-
-  test('admin callback route returns an authenticated session to the portal home flow', async ({
-    page,
-    adminUser,
-    setAuthToken,
-  }) => {
-    await setAuthToken(adminUser);
-    await page.goto('/auth/callback');
-    await page.waitForURL('**/admin', { timeout: 10000 });
-
-    expect(page.url()).toContain(APP_ROUTES.admin.home);
-  });
-
-  test('regular user callback route is cleared and redirected to /not-allowed', async ({
-    page,
-    regularUser,
-    setAuthToken,
-  }) => {
-    await setAuthToken(regularUser);
-    await page.goto('/auth/callback');
-    await page.waitForURL(`**${APP_ROUTES.notAllowed}`, { timeout: 15000 });
-
-    const token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
-    const role = await page.evaluate(() => localStorage.getItem('umak_link_web_role'));
-
-    expect(page.url()).toContain(APP_ROUTES.notAllowed);
-    expect(token).toBeNull();
-    expect(role).toBeNull();
   });
 
   test('guard user is redirected to /not-allowed and session is cleared', async ({

@@ -2,7 +2,7 @@ import { test, expect } from '../../fixtures/index';
 import { APP_ROUTES } from '../../config/routes';
 import { createMockPost } from '../../helpers/test-data';
 
-test.describe('Staff Dashboard', () => {
+test.describe('Staff Overview', () => {
   test('staff dashboard page loads', async ({
     page,
     staffUser,

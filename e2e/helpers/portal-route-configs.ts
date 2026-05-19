@@ -193,7 +193,7 @@ export const staffPortalRouteConfigs = {
     title: "Staff route /staff",
     route: "/staff",
     allowedRole: "Staff",
-    successText: "Staff Dashboard",
+    successText: "Staff Overview",
     errorScenario: {
       overrides: [listPostsErrorOverride],
       expectedText: DEFAULT_ACTION_ERROR_MESSAGE,
@@ -204,7 +204,7 @@ export const staffPortalRouteConfigs = {
     title: "Staff route /staff/dashboard",
     route: "/staff/dashboard",
     allowedRole: "Staff",
-    successText: "Staff Dashboard",
+    successText: "Staff Overview",
     errorScenario: {
       overrides: [listPostsErrorOverride],
       expectedText: DEFAULT_ACTION_ERROR_MESSAGE,

@@ -20,7 +20,7 @@ export function RoleRouteGuard({ allowedRoles, children }: RoleRouteGuardProps) 
     if (isLoading) return;
 
     if (!user) {
-      router.replace(rejectedUserType === "Guard" ? "/not-allowed" : "/");
+      router.replace(rejectedUserType ? "/not-allowed" : "/");
       return;
     }
 

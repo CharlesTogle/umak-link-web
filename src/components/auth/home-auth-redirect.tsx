@@ -14,7 +14,7 @@ export function HomeAuthRedirect() {
     if (isLoading) return;
 
     if (!user) {
-      if (rejectedUserType === "Guard") {
+      if (rejectedUserType) {
         router.replace("/not-allowed");
       }
       return;
@@ -23,7 +23,7 @@ export function HomeAuthRedirect() {
     router.replace(getRoleHomePath(user.user_type));
   }, [isLoading, rejectedUserType, router, user]);
 
-  if (!isLoading && !user && rejectedUserType !== "Guard") {
+  if (!isLoading && !user && !rejectedUserType) {
     return null;
   }
 

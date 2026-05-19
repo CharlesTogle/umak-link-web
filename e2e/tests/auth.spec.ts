@@ -7,20 +7,14 @@ test.describe('Authentication & Session Management', () => {
     adminUser,
     setAuthToken,
   }) => {
-    // Set auth token for admin
     await setAuthToken(adminUser);
-
-    // Navigate to admin dashboard
     await page.goto(APP_ROUTES.admin.dashboard);
 
-    // Verify page loads
     await expect(page.locator('h1')).toBeVisible();
 
-    // Verify token is in localStorage
     const token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
     expect(token).toBeTruthy();
 
-    // Verify role is stored
     const role = await page.evaluate(() => localStorage.getItem('umak_link_web_role'));
     expect(role).toBe('Admin');
   });
@@ -33,10 +27,8 @@ test.describe('Authentication & Session Management', () => {
     await setAuthToken(staffUser);
     await page.goto(APP_ROUTES.staff.dashboard);
 
-    // Verify page loads
     await expect(page.locator('body')).toBeVisible();
 
-    // Verify role is Staff
     const role = await page.evaluate(() => localStorage.getItem('umak_link_web_role'));
     expect(role).toBe('Staff');
   });
@@ -48,13 +40,65 @@ test.describe('Authentication & Session Management', () => {
   }) => {
     await setAuthToken(regularUser);
 
-    // Token should be set
     const token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
     expect(token).toBeTruthy();
 
-    // Role should be User
     const role = await page.evaluate(() => localStorage.getItem('umak_link_web_role'));
     expect(role).toBe('User');
+  });
+
+  test('mobile-sized login CTA starts OAuth redirect without hidden-button loading error', async ({
+    page,
+  }) => {
+    await page.route('**/auth/v1/authorize**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: '<!doctype html><title>OAuth Redirect</title><p>redirected</p>',
+      });
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(APP_ROUTES.home);
+
+    await page.getByRole('button', { name: 'Sign In With UMak Email' }).click();
+    await page.waitForURL(/auth\/v1\/authorize\?/i, { timeout: 10000 });
+
+    await expect(
+      page.getByText('Google Sign-In is still loading. Please try again.')
+    ).toHaveCount(0);
+
+    expect(page.url()).toContain('/auth/v1/authorize?');
+    expect(page.url()).toContain('provider=google');
+  });
+
+  test('admin callback route returns an authenticated session to the portal home flow', async ({
+    page,
+    adminUser,
+    setAuthToken,
+  }) => {
+    await setAuthToken(adminUser);
+    await page.goto('/auth/callback');
+    await page.waitForURL('**/admin', { timeout: 10000 });
+
+    expect(page.url()).toContain(APP_ROUTES.admin.home);
+  });
+
+  test('regular user callback route is cleared and redirected to /not-allowed', async ({
+    page,
+    regularUser,
+    setAuthToken,
+  }) => {
+    await setAuthToken(regularUser);
+    await page.goto('/auth/callback');
+    await page.waitForURL(`**${APP_ROUTES.notAllowed}`, { timeout: 15000 });
+
+    const token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
+    const role = await page.evaluate(() => localStorage.getItem('umak_link_web_role'));
+
+    expect(page.url()).toContain(APP_ROUTES.notAllowed);
+    expect(token).toBeNull();
+    expect(role).toBeNull();
   });
 
   test('guard user is redirected to /not-allowed and session is cleared', async ({
@@ -80,22 +124,17 @@ test.describe('Authentication & Session Management', () => {
     setAuthToken,
     logout,
   }) => {
-    // Login as admin
     await setAuthToken(adminUser);
     await page.goto(APP_ROUTES.admin.dashboard);
 
-    // Verify logged in
     let token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
     expect(token).toBeTruthy();
 
-    // Logout
     await logout();
 
-    // Verify token is cleared
     token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
     expect(token).toBeNull();
 
-    // Verify role is cleared
     const role = await page.evaluate(() => localStorage.getItem('umak_link_web_role'));
     expect(role).toBeNull();
   });
@@ -128,16 +167,13 @@ test.describe('Authentication & Session Management', () => {
   }) => {
     await setAuthToken(adminUser);
 
-    // Navigate to dashboard
     await page.goto(APP_ROUTES.admin.dashboard);
     let token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
     const initialToken = token;
 
-    // Navigate to another page
     await page.goto(APP_ROUTES.admin.announcements);
     token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
 
-    // Token should be the same
     expect(token).toBe(initialToken);
   });
 
@@ -149,11 +185,9 @@ test.describe('Authentication & Session Management', () => {
     await setAuthToken(adminUser);
     await page.goto(APP_ROUTES.admin.dashboard);
 
-    // Check localStorage
     const localToken = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
     expect(localToken).toBeTruthy();
 
-    // Check cookies
     const cookies = await page.context().cookies();
     const tokenCookie = cookies.find((c) => c.name === 'umak_link_web_api_token');
     expect(tokenCookie).toBeDefined();
@@ -163,16 +197,12 @@ test.describe('Authentication & Session Management', () => {
   test('invalid/missing token should not allow access to protected routes', async ({
     page,
   }) => {
-    // Try to access admin route without token
     await page.goto(APP_ROUTES.admin.dashboard);
 
-    // Should either redirect or show unauthorized state
-    // The actual behavior depends on your app's implementation
     const url = page.url();
 
-    // If redirected, should not be at admin dashboard
     if (!url.includes('/admin')) {
-      expect(url).toBeTruthy(); // Just verify we're somewhere
+      expect(url).toBeTruthy();
     }
   });
 
@@ -183,16 +213,13 @@ test.describe('Authentication & Session Management', () => {
   }) => {
     await setAuthToken(staffUser);
 
-    // Get token from storage
     const token = await page.evaluate(() => localStorage.getItem('umak_link_web_api_token'));
     expect(token).toBeTruthy();
 
     if (token) {
-      // Verify token structure (base64 encoded parts)
       const parts = token.split('.');
-      expect(parts.length).toBe(3); // header.payload.signature
+      expect(parts.length).toBe(3);
 
-      // Decode payload and verify claims
       const payloadStr = parts[1];
       if (payloadStr) {
         const payload = JSON.parse(

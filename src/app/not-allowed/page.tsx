@@ -22,14 +22,7 @@ export default function NotAllowedPage() {
         <p className="mt-3 text-sm text-slate-600">
           Your account no longer has access to this role-specific page.
         </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Go back
-          </button>
+        <div className="mt-6 flex justify-center">
           <button
             type="button"
             onClick={handleGoToLoginPage}
